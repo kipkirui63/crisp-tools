@@ -60,7 +60,7 @@ export default function Dashboard({ isVisitor = false, onRequestAuth }: Dashboar
   const [activeTool, setActiveTool] = useState<ToolType>('generator');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [signUpPromptOpen, setSignUpPromptOpen] = useState(false);
-  const { profile, signOut, user } = useAuth();
+  const { user, signOut } = useAuth();
 
   const handleToolAction = () => {
     if (isVisitor && onRequestAuth) {
@@ -143,12 +143,12 @@ export default function Dashboard({ isVisitor = false, onRequestAuth }: Dashboar
           })}
         </div>
 
-        {!isVisitor && profile ? (
+        {!isVisitor && user ? (
           <div className="p-4 border-t border-slate-700 space-y-3">
             <div className="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg">
               <div className="flex items-center gap-2">
                 <Coins className="w-5 h-5 text-yellow-400" />
-                <span className="text-sm font-medium text-white">{profile.credits || 0} Credits</span>
+                <span className="text-sm font-medium text-white">{user.credits || 0} Credits</span>
               </div>
               <button className="text-xs text-cyan-400 hover:text-cyan-300 font-medium">
                 Get More
@@ -157,13 +157,13 @@ export default function Dashboard({ isVisitor = false, onRequestAuth }: Dashboar
 
             <div className="flex items-center gap-3 p-3 bg-slate-900/50 rounded-lg">
               <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                {profile.full_name?.[0] || profile.email?.[0] || 'U'}
+                {user.fullName?.[0] || user.email?.[0] || 'U'}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-medium text-white truncate">
-                  {profile.full_name || 'User'}
+                  {user.fullName || 'User'}
                 </div>
-                <div className="text-xs text-slate-400 truncate">{profile.email}</div>
+                <div className="text-xs text-slate-400 truncate">{user.email}</div>
               </div>
               <button
                 onClick={() => signOut()}
@@ -216,7 +216,7 @@ export default function Dashboard({ isVisitor = false, onRequestAuth }: Dashboar
             ) : (
               <div className="px-4 py-1.5 bg-yellow-500/10 border border-yellow-500/30 rounded-full flex items-center gap-2">
                 <Coins className="w-4 h-4 text-yellow-400" />
-                <span className="text-sm font-semibold text-yellow-400">{profile?.credits || 0}</span>
+                <span className="text-sm font-semibold text-yellow-400">{user?.credits || 0}</span>
               </div>
             )}
           </div>

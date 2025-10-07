@@ -7,7 +7,7 @@ import Checkout from './components/Checkout';
 type AppView = 'visitor' | 'auth' | 'checkout' | 'dashboard';
 
 function AppContent() {
-  const { user, profile, loading } = useAuth();
+  const { user, loading } = useAuth();
   const [view, setView] = useState<AppView>('visitor');
 
   if (loading) {
@@ -28,7 +28,7 @@ function AppContent() {
     return <Dashboard isVisitor={true} onRequestAuth={() => setView('auth')} />;
   }
 
-  if (profile && !profile.has_paid && !profile.onboarding_completed) {
+  if (user && !user.hasPaid && !user.onboardingCompleted) {
     return <Checkout onComplete={() => setView('dashboard')} />;
   }
 

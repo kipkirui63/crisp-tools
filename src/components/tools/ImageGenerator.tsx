@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Sparkles, Download, Wand2 } from 'lucide-react';
 import ModelSelector from '../ModelSelector';
-import { AIModel, supabase } from '../../lib/supabase';
+import { AIModel, generations } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
 
 interface ImageGeneratorProps {
@@ -17,7 +17,7 @@ export default function ImageGenerator({ isVisitor = false, onRequestAuth }: Ima
   const [generatedImages, setGeneratedImages] = useState<string[]>([]);
   const [numberOfImages, setNumberOfImages] = useState(1);
 
-  const { profile, refreshProfile } = useAuth();
+  const { user, refreshProfile } = useAuth();
 
   const handleGenerate = async () => {
     if (isVisitor && onRequestAuth) {
@@ -25,12 +25,12 @@ export default function ImageGenerator({ isVisitor = false, onRequestAuth }: Ima
       return;
     }
 
-    if (!prompt.trim() || !selectedModel || !profile) {
+    if (!prompt.trim() || !selectedModel || !user) {
       return;
     }
 
-    const totalCost = selectedModel.cost_per_use * numberOfImages;
-    if (profile.credits < totalCost) {
+    const totalCost = selectedModel.costPerUse * numberOfImages;
+    if (user.credits < totalCost) {
       alert('Insufficient credits');
       return;
     }
@@ -38,21 +38,12 @@ export default function ImageGenerator({ isVisitor = false, onRequestAuth }: Ima
     setGenerating(true);
 
     try {
-      const { data, error } = await supabase
-        .from('generation_jobs')
-        .insert([
-          {
-            user_id: profile.id,
-            model_id: selectedModel.id,
-            tool_type: 'generator',
-            prompt: prompt,
-            parameters: { numberOfImages },
-            status: 'completed',
-            result_url: `https://images.pexels.com/photos/3861969/pexels-photo-3861969.jpeg?auto=compress&cs=tinysrgb&w=1024`,
-          },
-        ])
-        .select()
-        .single();
+      const { data, error } = await generations.create(
+        selectedModel.id,
+        'generator',
+        prompt,
+        { numberOfImages }
+      );
 
       if (!error && data) {
         const demoImages = [
@@ -61,11 +52,6 @@ export default function ImageGenerator({ isVisitor = false, onRequestAuth }: Ima
           'https://images.pexels.com/photos/1591373/pexels-photo-1591373.jpeg?auto=compress&cs=tinysrgb&w=1024',
         ];
         setGeneratedImages(demoImages.slice(0, numberOfImages));
-
-        await supabase
-          .from('profiles')
-          .update({ credits: profile.credits - totalCost })
-          .eq('id', profile.id);
 
         await refreshProfile();
       }
@@ -94,7 +80,7 @@ export default function ImageGenerator({ isVisitor = false, onRequestAuth }: Ima
                   <div className="text-sm text-slate-400">{selectedModel.provider}</div>
                   <div className="mt-2 flex items-center gap-1.5 text-xs text-yellow-400">
                     <Sparkles className="w-3.5 h-3.5" />
-                    <span>{selectedModel.cost_per_use} credits per image</span>
+                    <span>{selectedModel.costPerUse} credits per image</span>
                   </div>
                 </div>
               ) : (
@@ -143,7 +129,7 @@ export default function ImageGenerator({ isVisitor = false, onRequestAuth }: Ima
                 <span className="text-slate-300">Total Cost:</span>
                 <div className="flex items-center gap-1.5 text-yellow-400 font-semibold">
                   <Sparkles className="w-4 h-4" />
-                  <span>{selectedModel.cost_per_use * numberOfImages} credits</span>
+                  <span>{selectedModel.costPerUse * numberOfImages} credits</span>
                 </div>
               </div>
             </div>

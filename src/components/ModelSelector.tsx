@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { X, Search, Sparkles, CheckCircle } from 'lucide-react';
-import { supabase, AIModel } from '../lib/supabase';
+import { AIModel, models as apiModels } from '../lib/api';
 
 interface ModelSelectorProps {
   isOpen: boolean;
@@ -32,14 +32,10 @@ export default function ModelSelector({ isOpen, onClose, onSelect, selectedModel
 
   const fetchModels = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('ai_models')
-      .select('*')
-      .eq('is_active', true)
-      .order('name');
+    const { data, error } = await apiModels.list();
 
     if (data && !error) {
-      setModels(data);
+      setModels(data.models);
     }
     setLoading(false);
   };
@@ -141,7 +137,7 @@ export default function ModelSelector({ isOpen, onClose, onSelect, selectedModel
                     <div className="flex items-center gap-1.5 px-3 py-1.5 bg-yellow-500/10 border border-yellow-500/30 rounded-full">
                       <Sparkles className="w-4 h-4 text-yellow-400" />
                       <span className="text-sm font-semibold text-yellow-400">
-                        {model.cost_per_use}
+                        {model.costPerUse}
                       </span>
                     </div>
                   </div>

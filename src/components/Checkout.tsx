@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Sparkles, Check, Zap, Crown, Rocket, ArrowRight } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { subscriptions } from '../lib/api';
 
 interface CheckoutProps {
   onComplete: () => void;
@@ -74,10 +74,10 @@ const plans: PricingPlan[] = [
 export default function Checkout({ onComplete }: CheckoutProps) {
   const [selectedPlan, setSelectedPlan] = useState<string>('pro');
   const [processing, setProcessing] = useState(false);
-  const { profile, refreshProfile } = useAuth();
+  const { user, refreshProfile } = useAuth();
 
   const handlePurchase = async () => {
-    if (!profile) return;
+    if (!user) return;
 
     const plan = plans.find((p) => p.id === selectedPlan);
     if (!plan) return;
@@ -85,39 +85,17 @@ export default function Checkout({ onComplete }: CheckoutProps) {
     setProcessing(true);
 
     try {
-      const { error: subscriptionError } = await supabase.from('subscriptions').insert([
-        {
-          user_id: profile.id,
-          plan_type: plan.id,
-          credits_included: plan.credits,
-          amount_paid: plan.price,
-          status: 'active',
-          ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-        },
-      ]);
+      const { data, error } = await subscriptions.purchase(selectedPlan as 'starter' | 'pro' | 'enterprise');
 
-      if (subscriptionError) throw subscriptionError;
-
-      const newCredits = profile.credits + plan.credits;
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update({
-          credits: newCredits,
-          has_paid: true,
-          subscription_status: 'active',
-          subscription_tier: plan.id,
-          subscription_ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          onboarding_completed: true,
-        })
-        .eq('id', profile.id);
-
-      if (profileError) throw profileError;
+      if (error) {
+        throw new Error(error);
+      }
 
       await refreshProfile();
       onComplete();
-    } catch (err) {
+    } catch (err: any) {
       console.error('Purchase error:', err);
-      alert('Payment processing failed. Please try again.');
+      alert(err.message || 'Payment processing failed. Please try again.');
     } finally {
       setProcessing(false);
     }
