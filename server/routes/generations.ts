@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db } from '../db';
+import { db } from '../db/index';
 import { generationJobs, users, aiModels } from '../db/schema';
 import { createGenerationJobSchema } from '../validators/generation';
 import { authenticateToken, AuthRequest } from '../middleware/auth';

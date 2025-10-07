@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { db } from '../db';
+import { db } from '../db/index';
 import { subscriptions, users } from '../db/schema';
 import { purchaseSubscriptionSchema } from '../validators/generation';
 import { authenticateToken, AuthRequest } from '../middleware/auth';
