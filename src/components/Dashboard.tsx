@@ -13,9 +13,9 @@ import {
   Type,
   Menu,
   X,
-  CreditCard,
   LogOut,
   Coins,
+  LogIn,
 } from 'lucide-react';
 import ImageGenerator from './tools/ImageGenerator';
 import ImageEditor from './tools/ImageEditor';
@@ -26,6 +26,7 @@ import BackgroundRemover from './tools/BackgroundRemover';
 import ClothChanger from './tools/ClothChanger';
 import InteriorDesign from './tools/InteriorDesign';
 import ImageToText from './tools/ImageToText';
+import SignUpPrompt from './SignUpPrompt';
 
 type ToolType =
   | 'generator'
@@ -50,33 +51,50 @@ const tools = [
   { id: 'text' as ToolType, name: 'Image to Text', icon: Type, description: 'Extract text from images' },
 ];
 
-export default function Dashboard() {
+interface DashboardProps {
+  isVisitor?: boolean;
+  onRequestAuth?: () => void;
+}
+
+export default function Dashboard({ isVisitor = false, onRequestAuth }: DashboardProps) {
   const [activeTool, setActiveTool] = useState<ToolType>('generator');
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const { profile, signOut } = useAuth();
+  const [signUpPromptOpen, setSignUpPromptOpen] = useState(false);
+  const { profile, signOut, user } = useAuth();
+
+  const handleToolAction = () => {
+    if (isVisitor && onRequestAuth) {
+      setSignUpPromptOpen(true);
+    }
+  };
 
   const renderTool = () => {
+    const toolProps = {
+      isVisitor,
+      onRequestAuth: handleToolAction
+    };
+
     switch (activeTool) {
       case 'generator':
-        return <ImageGenerator />;
+        return <ImageGenerator {...toolProps} />;
       case 'editor':
-        return <ImageEditor />;
+        return <ImageEditor {...toolProps} />;
       case 'headshot':
-        return <HeadshotGenerator />;
+        return <HeadshotGenerator {...toolProps} />;
       case 'studio':
-        return <PhotoStudio />;
+        return <PhotoStudio {...toolProps} />;
       case 'logo':
-        return <LogoGenerator />;
+        return <LogoGenerator {...toolProps} />;
       case 'background':
-        return <BackgroundRemover />;
+        return <BackgroundRemover {...toolProps} />;
       case 'cloth':
-        return <ClothChanger />;
+        return <ClothChanger {...toolProps} />;
       case 'interior':
-        return <InteriorDesign />;
+        return <InteriorDesign {...toolProps} />;
       case 'text':
-        return <ImageToText />;
+        return <ImageToText {...toolProps} />;
       default:
-        return <ImageGenerator />;
+        return <ImageGenerator {...toolProps} />;
     }
   };
 
@@ -125,36 +143,51 @@ export default function Dashboard() {
           })}
         </div>
 
-        <div className="p-4 border-t border-slate-700 space-y-3">
-          <div className="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg">
-            <div className="flex items-center gap-2">
-              <Coins className="w-5 h-5 text-yellow-400" />
-              <span className="text-sm font-medium text-white">{profile?.credits || 0} Credits</span>
-            </div>
-            <button className="text-xs text-cyan-400 hover:text-cyan-300 font-medium">
-              Get More
-            </button>
-          </div>
-
-          <div className="flex items-center gap-3 p-3 bg-slate-900/50 rounded-lg">
-            <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-              {profile?.full_name?.[0] || profile?.email?.[0] || 'U'}
-            </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-white truncate">
-                {profile?.full_name || 'User'}
+        {!isVisitor && profile ? (
+          <div className="p-4 border-t border-slate-700 space-y-3">
+            <div className="flex items-center justify-between p-3 bg-slate-900/50 rounded-lg">
+              <div className="flex items-center gap-2">
+                <Coins className="w-5 h-5 text-yellow-400" />
+                <span className="text-sm font-medium text-white">{profile.credits || 0} Credits</span>
               </div>
-              <div className="text-xs text-slate-400 truncate">{profile?.email}</div>
+              <button className="text-xs text-cyan-400 hover:text-cyan-300 font-medium">
+                Get More
+              </button>
             </div>
-            <button
-              onClick={() => signOut()}
-              className="text-slate-400 hover:text-white transition-colors"
-              title="Sign Out"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+
+            <div className="flex items-center gap-3 p-3 bg-slate-900/50 rounded-lg">
+              <div className="w-8 h-8 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                {profile.full_name?.[0] || profile.email?.[0] || 'U'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-sm font-medium text-white truncate">
+                  {profile.full_name || 'User'}
+                </div>
+                <div className="text-xs text-slate-400 truncate">{profile.email}</div>
+              </div>
+              <button
+                onClick={() => signOut()}
+                className="text-slate-400 hover:text-white transition-colors"
+                title="Sign Out"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="p-4 border-t border-slate-700">
+            <button
+              onClick={onRequestAuth}
+              className="w-full py-3 px-4 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold rounded-lg hover:from-cyan-600 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all shadow-lg shadow-cyan-500/30 flex items-center justify-center gap-2"
+            >
+              <LogIn className="w-4 h-4" />
+              Sign In to Use
+            </button>
+            <p className="text-center text-xs text-slate-400 mt-3">
+              Exploring in demo mode
+            </p>
+          </div>
+        )}
       </aside>
 
       <div className="flex-1 flex flex-col">
@@ -176,15 +209,31 @@ export default function Dashboard() {
           </div>
 
           <div className="ml-auto flex items-center gap-3">
-            <div className="px-4 py-1.5 bg-yellow-500/10 border border-yellow-500/30 rounded-full flex items-center gap-2">
-              <Coins className="w-4 h-4 text-yellow-400" />
-              <span className="text-sm font-semibold text-yellow-400">{profile?.credits || 0}</span>
-            </div>
+            {isVisitor ? (
+              <div className="px-4 py-1.5 bg-amber-500/10 border border-amber-500/30 rounded-full">
+                <span className="text-sm font-semibold text-amber-400">Demo Mode</span>
+              </div>
+            ) : (
+              <div className="px-4 py-1.5 bg-yellow-500/10 border border-yellow-500/30 rounded-full flex items-center gap-2">
+                <Coins className="w-4 h-4 text-yellow-400" />
+                <span className="text-sm font-semibold text-yellow-400">{profile?.credits || 0}</span>
+              </div>
+            )}
           </div>
         </header>
 
         <main className="flex-1 overflow-auto">{renderTool()}</main>
       </div>
+
+      <SignUpPrompt
+        isOpen={signUpPromptOpen}
+        onClose={() => setSignUpPromptOpen(false)}
+        onSignUp={() => {
+          setSignUpPromptOpen(false);
+          if (onRequestAuth) onRequestAuth();
+        }}
+        toolName={tools.find((t) => t.id === activeTool)?.name || 'this tool'}
+      />
     </div>
   );
 }

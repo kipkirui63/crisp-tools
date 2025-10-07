@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { Upload, Type, Copy, Check } from 'lucide-react';
 
-export default function ImageToText() {
+interface ImageToTextProps {
+  isVisitor?: boolean;
+  onRequestAuth?: () => void;
+}
+
+export default function ImageToText({ isVisitor = false, onRequestAuth }: ImageToTextProps) {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [extractedText, setExtractedText] = useState('');
   const [copied, setCopied] = useState(false);
@@ -77,6 +82,7 @@ export default function ImageToText() {
           </div>
 
           <button
+            onClick={() => isVisitor && onRequestAuth && onRequestAuth()}
             disabled={!uploadedImage}
             className="w-full py-4 px-6 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold rounded-lg hover:from-cyan-600 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-cyan-500/30 flex items-center justify-center gap-2"
           >

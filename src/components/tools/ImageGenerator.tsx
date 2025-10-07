@@ -4,7 +4,12 @@ import ModelSelector from '../ModelSelector';
 import { AIModel, supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
 
-export default function ImageGenerator() {
+interface ImageGeneratorProps {
+  isVisitor?: boolean;
+  onRequestAuth?: () => void;
+}
+
+export default function ImageGenerator({ isVisitor = false, onRequestAuth }: ImageGeneratorProps) {
   const [prompt, setPrompt] = useState('');
   const [selectedModel, setSelectedModel] = useState<AIModel | null>(null);
   const [modelSelectorOpen, setModelSelectorOpen] = useState(false);
@@ -15,6 +20,11 @@ export default function ImageGenerator() {
   const { profile, refreshProfile } = useAuth();
 
   const handleGenerate = async () => {
+    if (isVisitor && onRequestAuth) {
+      onRequestAuth();
+      return;
+    }
+
     if (!prompt.trim() || !selectedModel || !profile) {
       return;
     }

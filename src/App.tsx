@@ -1,9 +1,14 @@
+import { useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
+import Checkout from './components/Checkout';
+
+type AppView = 'visitor' | 'auth' | 'checkout' | 'dashboard';
 
 function AppContent() {
-  const { user, loading } = useAuth();
+  const { user, profile, loading } = useAuth();
+  const [view, setView] = useState<AppView>('visitor');
 
   if (loading) {
     return (
@@ -16,7 +21,18 @@ function AppContent() {
     );
   }
 
-  return user ? <Dashboard /> : <Auth />;
+  if (!user) {
+    if (view === 'auth') {
+      return <Auth />;
+    }
+    return <Dashboard isVisitor={true} onRequestAuth={() => setView('auth')} />;
+  }
+
+  if (profile && !profile.has_paid && !profile.onboarding_completed) {
+    return <Checkout onComplete={() => setView('dashboard')} />;
+  }
+
+  return <Dashboard />;
 }
 
 function App() {

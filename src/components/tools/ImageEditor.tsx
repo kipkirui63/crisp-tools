@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { Upload, Wand2, Download } from 'lucide-react';
 
-export default function ImageEditor() {
+interface ImageEditorProps {
+  isVisitor?: boolean;
+  onRequestAuth?: () => void;
+}
+
+export default function ImageEditor({ isVisitor = false, onRequestAuth }: ImageEditorProps) {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [instructions, setInstructions] = useState('');
 
@@ -49,6 +54,7 @@ export default function ImageEditor() {
           </div>
 
           <button
+            onClick={() => isVisitor && onRequestAuth && onRequestAuth()}
             disabled={!uploadedImage || !instructions.trim()}
             className="w-full py-4 px-6 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold rounded-lg hover:from-cyan-600 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-cyan-500/30 flex items-center justify-center gap-2"
           >

@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { Palette, Wand2 } from 'lucide-react';
 
-export default function LogoGenerator() {
+interface LogoGeneratorProps {
+  isVisitor?: boolean;
+  onRequestAuth?: () => void;
+}
+
+export default function LogoGenerator({ isVisitor = false, onRequestAuth }: LogoGeneratorProps) {
   const [brandName, setBrandName] = useState('');
   const [industry, setIndustry] = useState('');
   const [style, setStyle] = useState('modern');
@@ -60,6 +65,7 @@ export default function LogoGenerator() {
           </div>
 
           <button
+            onClick={() => isVisitor && onRequestAuth && onRequestAuth()}
             disabled={!brandName.trim()}
             className="w-full py-4 px-6 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold rounded-lg hover:from-cyan-600 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-cyan-500/30 flex items-center justify-center gap-2"
           >
