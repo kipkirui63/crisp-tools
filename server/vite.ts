@@ -17,21 +17,30 @@ export async function setupVite(app: Express, server: any) {
 
   app.use(vite.middlewares);
 
-  app.use("*", async (req, res, next) => {
-    const url = req.originalUrl;
+  app.use((req, res, next) => {
+    if (req.method === "GET" && !req.url.startsWith("/api/")) {
+      const url = req.originalUrl;
 
-    try {
-      let template = fs.readFileSync(
+      fs.readFile(
         path.resolve(__dirname, "..", "index.html"),
         "utf-8",
+        async (err, template) => {
+          if (err) {
+            vite.ssrFixStacktrace(err);
+            return next(err);
+          }
+
+          try {
+            template = await vite.transformIndexHtml(url, template);
+            res.status(200).set({ "Content-Type": "text/html" }).end(template);
+          } catch (e) {
+            vite.ssrFixStacktrace(e as Error);
+            next(e);
+          }
+        }
       );
-
-      template = await vite.transformIndexHtml(url, template);
-
-      res.status(200).set({ "Content-Type": "text/html" }).end(template);
-    } catch (e) {
-      vite.ssrFixStacktrace(e as Error);
-      next(e);
+    } else {
+      next();
     }
   });
 }
