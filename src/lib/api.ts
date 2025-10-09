@@ -46,6 +46,7 @@ export interface AIModel {
   id: string;
   name: string;
   provider: string;
+  apiModel: string; // Add this
   modelType: string;
   capabilities: Record<string, any>;
   costPerUse: number;
@@ -61,7 +62,7 @@ export interface GenerationJob {
   prompt: string;
   parameters: Record<string, any>;
   status: string;
-  resultUrl: string | null;
+  resultUrl: string | null;  // This is now the main field for image URLs
   errorMessage: string | null;
   createdAt: string;
   completedAt: string | null;
@@ -94,12 +95,18 @@ export const models = {
 
 export const generations = {
   create: (modelId: string, toolType: string, prompt: string, parameters: Record<string, any>) =>
-    apiCall<{ job: GenerationJob }>('/api/generations', {
+    apiCall<{ 
+      images: string[];
+      generationJobs: GenerationJob[];
+      creditsUsed: number;
+      creditsRemaining: number;
+      warnings?: string[];
+    }>('/api/generationJobs', { // Note: fixed endpoint name
       method: 'POST',
-      body: JSON.stringify({ modelId, toolType, prompt, parameters }),
+      body: JSON.stringify({ modelId, toolType, prompt, options: parameters }),
     }),
 
-  list: () => apiCall<{ jobs: GenerationJob[] }>('/api/generations'),
+  list: () => apiCall<{ generationJobs: GenerationJob[] }>('/api/generationJobs/user'),
 };
 
 export const subscriptions = {

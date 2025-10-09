@@ -1,73 +1,209 @@
-import { Router } from 'express';
-import { db } from '../db/index';
-import { generationJobs, users, aiModels } from '../db/schema';
-import { createGenerationJobSchema } from '../validators/generation';
-import { authenticateToken, AuthRequest } from '../middleware/auth';
+// ===== server/routes/generationJobs.ts - FOR IMAGEGENERATOR ONLY =====
+import { Router, Response } from 'express';
+import { getDispatcher } from '../services/imageDispatcher';
+import { db } from '../db';
+import { aiModels, generationJobs, users } from '../db/schema';
 import { eq } from 'drizzle-orm';
+import { requireAuth, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
-router.post('/', authenticateToken, async (req: AuthRequest, res) => {
+/**
+ * POST /api/generationJobs
+ * Generate images using the selected AI model
+ */
+router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const validatedData = createGenerationJobSchema.parse(req.body);
+    const { modelId, toolType, prompt, options } = req.body;
+    const userId = req.user!.id;
+    const numberOfImages = options?.numberOfImages || 1;
 
-    const user = await db.query.users.findFirst({
-      where: eq(users.id, req.userId!),
-    });
-
-    if (!user) {
-      return res.status(404).json({ error: 'User not found' });
+    // Validate inputs
+    if (!modelId || !prompt || !toolType) {
+      return res.status(400).json({ 
+        error: 'Missing required fields: modelId, prompt, toolType' 
+      });
     }
 
+    if (prompt.length > 1000) {
+      return res.status(400).json({ 
+        error: 'Prompt is too long (max 1000 characters)' 
+      });
+    }
+
+    // Get model from database
     const model = await db.query.aiModels.findFirst({
-      where: eq(aiModels.id, validatedData.modelId),
+      where: eq(aiModels.id, modelId),
     });
 
     if (!model) {
       return res.status(404).json({ error: 'Model not found' });
     }
 
-    const numberOfImages = validatedData.parameters.numberOfImages || 1;
+    // Get user and check credits
+    const user = await db.query.users.findFirst({
+      where: eq(users.id, userId),
+    });
+
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
     const totalCost = model.costPerUse * numberOfImages;
-
     if (user.credits < totalCost) {
-      return res.status(400).json({ error: 'Insufficient credits' });
+      return res.status(402).json({ 
+        error: `Insufficient credits. You have ${user.credits} but need ${totalCost}`,
+        required: totalCost,
+        available: user.credits,
+      });
     }
 
-    const [job] = await db.insert(generationJobs).values({
-      userId: req.userId!,
-      modelId: validatedData.modelId,
-      toolType: validatedData.toolType,
-      prompt: validatedData.prompt,
-      parameters: validatedData.parameters,
-      status: 'completed',
-      resultUrl: 'https://images.pexels.com/photos/3861969/pexels-photo-3861969.jpeg?auto=compress&cs=tinysrgb&w=1024',
-    }).returning();
+    console.log(`[Generation] Starting generation for user ${userId}`);
+    console.log(`[Generation] Model: ${model.name} (${model.apiModel})`);
+    console.log(`[Generation] Prompt: ${prompt.substring(0, 100)}...`);
+    console.log(`[Generation] Number of images: ${numberOfImages}`);
 
-    await db.update(users)
-      .set({ credits: user.credits - totalCost })
-      .where(eq(users.id, req.userId!));
+    // Get dispatcher and generate images
+    const dispatcher = getDispatcher();
+    const generatedImages: string[] = [];
+    const generationErrors: string[] = [];
 
-    res.json({ job });
+    for (let i = 0; i < numberOfImages; i++) {
+      try {
+        console.log(`[Generation] Generating image ${i + 1}/${numberOfImages}...`);
+        
+        const result = await dispatcher.generateImage({
+          prompt,
+          model: model.apiModel,
+          width: options?.width || 1024,
+          height: options?.height || 1024,
+        });
+
+        generatedImages.push(result.imageUrl);
+        console.log(`[Generation] Image ${i + 1} generated successfully`);
+      } catch (error: any) {
+        console.error(`[Generation] Failed to generate image ${i + 1}:`, error.message);
+        generationErrors.push(`Image ${i + 1}: ${error.message}`);
+      }
+    }
+
+    // Check if at least one image was generated
+    if (generatedImages.length === 0) {
+      return res.status(500).json({ 
+        error: 'Failed to generate any images',
+        details: generationErrors,
+      });
+    }
+
+    console.log(`[Generation] Successfully generated ${generatedImages.length} images`);
+
+    // Deduct credits from user
+    const newCredits = user.credits - totalCost;
+    await db
+      .update(users)
+      .set({ credits: newCredits })
+      .where(eq(users.id, userId));
+
+    console.log(`[Generation] Credits deducted: ${totalCost} (${user.credits} -> ${newCredits})`);
+
+    // Save generation records
+    const savedgenerationJobs = [];
+    for (const imageUrl of generatedImages) {
+      try {
+        const [generation] = await db
+          .insert(generationJobs)
+          .values({
+            userId,
+            modelId: model.id,
+            toolType,
+            prompt,
+            imageUrl,
+            status: 'completed',
+            createdAt: new Date(),
+          })
+          .returning();
+
+        savedgenerationJobs.push(generation);
+      } catch (dbError: any) {
+        console.error('[Generation] Error saving generation record:', dbError);
+      }
+    }
+
+    console.log(`[Generation] Saved ${savedgenerationJobs.length} generation records`);
+
+    // Return successful response
+    res.json({
+    success: true,
+    images: generatedImages,
+    generationJobs: savedgenerationJobs,
+    creditsUsed: totalCost,
+    creditsRemaining: newCredits,
+    warnings: generationErrors.length > 0 ? generationErrors : undefined,
+});
+
   } catch (error: any) {
-    console.error('Create generation error:', error);
-    if (error.name === 'ZodError') {
-      return res.status(400).json({ error: error.errors[0].message });
-    }
-    res.status(500).json({ error: 'Failed to create generation job' });
+    console.error('[Generation] Unexpected error:', error);
+    res.status(500).json({ 
+      error: error.message || 'Failed to generate images',
+      details: process.env.NODE_ENV === 'development' ? error.stack : undefined,
+    });
   }
 });
 
-router.get('/', authenticateToken, async (req: AuthRequest, res) => {
+/**
+ * GET /api/generationJobs/user
+ * Get user's generation history
+ */
+router.get('/user', requireAuth, async (req: AuthRequest, res: Response) => {
   try {
-    const jobs = await db.query.generationJobs.findMany({
-      where: eq(generationJobs.userId, req.userId!),
+    const userId = req.user!.id;
+
+    const usergenerationJobs = await db.query.generationJobs.findMany({
+      where: eq(generationJobs.userId, userId),
+      orderBy: (gens) => gens.createdAt,
+      limit: 50,
     });
 
-    res.json({ jobs });
-  } catch (error) {
-    console.error('Get generations error:', error);
-    res.status(500).json({ error: 'Failed to fetch generations' });
+    res.json({
+      success: true,
+      count: usergenerationJobs.length,
+      generationJobs: usergenerationJobs,
+    });
+  } catch (error: any) {
+    console.error('[generationJobs] Error fetching history:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/generationJobs/:id
+ * Get a specific generation
+ */
+router.get('/:id', requireAuth, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const userId = req.user!.id;
+
+    const generation = await db.query.generationJobs.findFirst({
+      where: eq(generationJobs.id, id),
+    });
+
+    if (!generation) {
+      return res.status(404).json({ error: 'Generation not found' });
+    }
+
+    // Verify ownership
+    if (generation.userId !== userId) {
+      return res.status(403).json({ error: 'Unauthorized' });
+    }
+
+    res.json({
+      success: true,
+      generation,
+    });
+  } catch (error: any) {
+    console.error('[generationJobs] Error fetching generation:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 
