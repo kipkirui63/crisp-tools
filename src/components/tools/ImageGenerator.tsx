@@ -4,12 +4,7 @@ import ModelSelector from '../ModelSelector';
 import { AIModel, generations } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
 
-interface ImageGeneratorProps {
-  isVisitor?: boolean;
-  onRequestAuth?: () => void;
-}
-
-export default function ImageGenerator({ isVisitor = false, onRequestAuth }: ImageGeneratorProps) {
+export default function ImageGenerator() {
   const [prompt, setPrompt] = useState('');
   const [selectedModel, setSelectedModel] = useState<AIModel | null>(null);
   const [modelSelectorOpen, setModelSelectorOpen] = useState(false);
@@ -62,11 +57,6 @@ export default function ImageGenerator({ isVisitor = false, onRequestAuth }: Ima
   };
 
   const handleGenerate = async () => {
-    if (isVisitor && onRequestAuth) {
-      onRequestAuth();
-      return;
-    }
-
     if (!prompt.trim() || !selectedModel || !user) {
       setError('Please select a model and enter a prompt');
       return;

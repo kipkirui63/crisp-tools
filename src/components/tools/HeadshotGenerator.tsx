@@ -1,12 +1,7 @@
 import { useState } from 'react';
 import { Upload, User, Wand2 } from 'lucide-react';
 
-interface HeadshotGeneratorProps {
-  isVisitor?: boolean;
-  onRequestAuth?: () => void;
-}
-
-export default function HeadshotGenerator({ isVisitor = false, onRequestAuth }: HeadshotGeneratorProps) {
+export default function HeadshotGenerator() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [style, setStyle] = useState('professional');
 
@@ -71,7 +66,6 @@ export default function HeadshotGenerator({ isVisitor = false, onRequestAuth }: 
           </div>
 
           <button
-            onClick={() => isVisitor && onRequestAuth && onRequestAuth()}
             disabled={!uploadedImage}
             className="w-full py-4 px-6 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold rounded-lg hover:from-cyan-600 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-cyan-500/30 flex items-center justify-center gap-2"
           >

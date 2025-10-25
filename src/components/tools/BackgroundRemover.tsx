@@ -1,12 +1,7 @@
 import { useState } from 'react';
 import { Upload, Image, Eraser, Wand2 } from 'lucide-react';
 
-interface BackgroundRemoverProps {
-  isVisitor?: boolean;
-  onRequestAuth?: () => void;
-}
-
-export default function BackgroundRemover({ isVisitor = false, onRequestAuth }: BackgroundRemoverProps) {
+export default function BackgroundRemover() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [processedImage, setProcessedImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);

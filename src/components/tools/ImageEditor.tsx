@@ -4,12 +4,7 @@ import ModelSelector from '../ModelSelector';
 import { AIModel } from '../../lib/api';
 import { useAuth } from '../../contexts/AuthContext';
 
-interface ImageEditorProps {
-  isVisitor?: boolean;
-  onRequestAuth?: () => void;
-}
-
-export default function ImageEditor({ isVisitor = false, onRequestAuth }: ImageEditorProps) {
+export default function ImageEditor() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [uploadedImageFile, setUploadedImageFile] = useState<File | null>(null);
   const [instructions, setInstructions] = useState('');
@@ -80,11 +75,6 @@ export default function ImageEditor({ isVisitor = false, onRequestAuth }: ImageE
   };
 
   const handleEdit = async () => {
-    if (isVisitor && onRequestAuth) {
-      onRequestAuth();
-      return;
-    }
-
     if (!instructions.trim()) {
       setError('Please enter editing instructions');
       return;

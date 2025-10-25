@@ -3,10 +3,6 @@ import { useAuth } from '../contexts/AuthContext';
 import { Sparkles, Check, Zap, Crown, Rocket, ArrowRight } from 'lucide-react';
 import { subscriptions } from '../lib/api';
 
-interface CheckoutProps {
-  onComplete: () => void;
-}
-
 interface PricingPlan {
   id: string;
   name: string;
@@ -71,7 +67,7 @@ const plans: PricingPlan[] = [
   },
 ];
 
-export default function Checkout({ onComplete }: CheckoutProps) {
+export default function Checkout() {
   const [selectedPlan, setSelectedPlan] = useState<string>('pro');
   const [processing, setProcessing] = useState(false);
   const { user, refreshProfile } = useAuth();
@@ -92,7 +88,6 @@ export default function Checkout({ onComplete }: CheckoutProps) {
       }
 
       await refreshProfile();
-      onComplete();
     } catch (err: any) {
       console.error('Purchase error:', err);
       alert(err.message || 'Payment processing failed. Please try again.');

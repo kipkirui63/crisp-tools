@@ -24,7 +24,7 @@ app.use(cookieParser());
 
 app.use('/api/auth', authRoutes);
 app.use('/api/models', modelsRoutes);
-app.use('/api/generations', generationsRoutes);
+app.use('/api/generationJobs', generationsRoutes);
 app.use('/api/subscriptions', subscriptionsRoutes);
 
 app.get('/api/health', (req, res) => {
