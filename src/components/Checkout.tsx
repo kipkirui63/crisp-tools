@@ -1,7 +1,11 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Sparkles, Check, Zap, Crown, Rocket, ArrowRight } from 'lucide-react';
+import { Sparkles, Check, Zap, Crown, Rocket, ArrowRight, ArrowLeft } from 'lucide-react';
 import { subscriptions } from '../lib/api';
+
+interface CheckoutProps {
+  onBack?: () => void;
+}
 
 interface PricingPlan {
   id: string;
@@ -67,7 +71,7 @@ const plans: PricingPlan[] = [
   },
 ];
 
-export default function Checkout() {
+export default function Checkout({ onBack }: CheckoutProps = {}) {
   const [selectedPlan, setSelectedPlan] = useState<string>('pro');
   const [processing, setProcessing] = useState(false);
   const { user, refreshProfile } = useAuth();

@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { Upload, Image, Eraser, Wand2 } from 'lucide-react';
 
-export default function BackgroundRemover() {
+interface BackgroundRemoverProps {
+  isAuthenticated: boolean;
+  onRequestAuth: () => void;
+}
+
+export default function BackgroundRemover({ isAuthenticated, onRequestAuth }: BackgroundRemoverProps) {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [processedImage, setProcessedImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -19,6 +24,11 @@ export default function BackgroundRemover() {
 
   // Simulate background removal process
   const handleRemoveBackground = () => {
+    if (!isAuthenticated) {
+      onRequestAuth();
+      return;
+    }
+
     if (!uploadedImage) return;
     setIsProcessing(true);
     setProcessedImage(null);

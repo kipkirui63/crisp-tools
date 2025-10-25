@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { Upload,  Copy, Check, FileText } from 'lucide-react';
 
-export default function AIImageToText() {
+interface ImageToTextProps {
+  isAuthenticated: boolean;
+  onRequestAuth: () => void;
+}
+
+export default function AIImageToText({ isAuthenticated, onRequestAuth }: ImageToTextProps) {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [extractedText, setExtractedText] = useState('');
   const [additionalContext, setAdditionalContext] = useState('');

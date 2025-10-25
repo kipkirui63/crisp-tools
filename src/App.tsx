@@ -1,10 +1,14 @@
+import { useState } from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Auth from './components/Auth';
 import Dashboard from './components/Dashboard';
 import Checkout from './components/Checkout';
 
+type AppView = 'browse' | 'auth' | 'checkout' | 'dashboard';
+
 function AppContent() {
   const { user, loading } = useAuth();
+  const [view, setView] = useState<AppView>('browse');
 
   if (loading) {
     return (
@@ -17,15 +21,21 @@ function AppContent() {
     );
   }
 
-  if (!user) {
-    return <Auth />;
+  // Show auth modal if user clicked a feature but isn't logged in
+  if (!user && view === 'auth') {
+    return <Auth onBack={() => setView('browse')} />;
   }
 
-  if (!user.hasPaid) {
-    return <Checkout />;
+  // If user is logged in but hasn't paid, show checkout
+  if (user && !user.hasPaid && view !== 'browse') {
+    return <Checkout onBack={() => setView('browse')} />;
   }
 
-  return <Dashboard />;
+  // Show dashboard - it handles both authenticated and browsing modes
+  return <Dashboard
+    isAuthenticated={!!user && user.hasPaid}
+    onRequestAuth={() => setView('auth')}
+  />;
 }
 
 function App() {

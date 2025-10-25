@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { Upload, Image, Wand2 } from 'lucide-react';
 
-export default function ClothChanger() {
+interface ClothChangerProps {
+  isAuthenticated: boolean;
+  onRequestAuth: () => void;
+}
+
+export default function ClothChanger({ isAuthenticated, onRequestAuth }: ClothChangerProps) {
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [clothDescription, setClothDescription] = useState('');
   const [numImages, setNumImages] = useState(1);

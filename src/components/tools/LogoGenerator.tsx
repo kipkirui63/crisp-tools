@@ -9,7 +9,12 @@ interface ModelOption {
   image: string;
 }
 
-export default function LogoGenerator() {
+interface LogoGeneratorProps {
+  isAuthenticated: boolean;
+  onRequestAuth: () => void;
+}
+
+export default function LogoGenerator({ isAuthenticated, onRequestAuth }: LogoGeneratorProps) {
   const [logoDescription, setLogoDescription] = useState('');
   const [uploadedImages, setUploadedImages] = useState<string[]>([]);
   const [selectedModel, setSelectedModel] = useState<ModelOption | null>(null);

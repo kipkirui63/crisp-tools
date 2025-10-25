@@ -15,7 +15,12 @@ interface GeneratedImage {
   prompt: string;
 }
 
-export default function AIPhotoGenerator() {
+interface PhotoStudioProps {
+  isAuthenticated: boolean;
+  onRequestAuth: () => void;
+}
+
+export default function AIPhotoGenerator({ isAuthenticated, onRequestAuth }: PhotoStudioProps) {
   const [currentView, setCurrentView] = useState<'gallery' | 'train' | 'studio'>('gallery');
   const [models, setModels] = useState<Model[]>([]);
   const [generatedImages, setGeneratedImages] = useState<GeneratedImage[]>([]);

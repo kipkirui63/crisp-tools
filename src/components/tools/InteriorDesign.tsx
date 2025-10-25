@@ -8,7 +8,12 @@ interface GeneratedImage {
   style: string;
 }
 
-export default function AIInteriorDesign() {
+interface InteriorDesignProps {
+  isAuthenticated: boolean;
+  onRequestAuth: () => void;
+}
+
+export default function AIInteriorDesign({ isAuthenticated, onRequestAuth }: InteriorDesignProps) {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [roomType, setRoomType] = useState('Living Room');
   const [designStyle, setDesignStyle] = useState('Modern');
