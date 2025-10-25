@@ -1,16 +1,13 @@
 import { useState } from 'react';
-import { Upload, Type, Copy, Check } from 'lucide-react';
+import { Upload,  Copy, Check, FileText } from 'lucide-react';
 
-interface ImageToTextProps {
-  isVisitor?: boolean;
-  onRequestAuth?: () => void;
-}
-
-export default function ImageToText({ isVisitor = false, onRequestAuth }: ImageToTextProps) {
+export default function AIImageToText() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [extractedText, setExtractedText] = useState('');
+  const [additionalContext, setAdditionalContext] = useState('');
+  const [useAdvancedModel, setUseAdvancedModel] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [mode, setMode] = useState<'caption' | 'ocr'>('caption');
+  const [isExtracting, setIsExtracting] = useState(false);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -21,6 +18,28 @@ export default function ImageToText({ isVisitor = false, onRequestAuth }: ImageT
     }
   };
 
+  const handleExtractText = async () => {
+    if (!uploadedImage) {
+      alert('Please upload an image first');
+      return;
+    }
+
+    setIsExtracting(true);
+    
+    // Simulate text extraction
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    const sampleText = `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.
+
+This is extracted text from your image. In a real implementation, this would use OCR technology to recognize and extract actual text from the uploaded image.
+
+${additionalContext ? `\nAdditional Context Applied: ${additionalContext}` : ''}
+${useAdvancedModel ? '\n[Using Advanced AI Model for better accuracy]' : ''}`;
+    
+    setExtractedText(sampleText);
+    setIsExtracting(false);
+  };
+
   const handleCopy = () => {
     navigator.clipboard.writeText(extractedText);
     setCopied(true);
@@ -28,97 +47,107 @@ export default function ImageToText({ isVisitor = false, onRequestAuth }: ImageT
   };
 
   return (
-    <div className="h-full flex">
+    <div className="h-full flex bg-slate-900">
+      {/* Left Sidebar - Controls */}
       <div className="w-96 bg-slate-800 border-r border-slate-700 p-6 overflow-y-auto">
         <div className="space-y-6">
+          {/* Upload Section */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-2">
+            <label className="block text-sm font-semibold text-white mb-2">
               Upload Image
             </label>
             <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer hover:border-cyan-500 transition-all bg-slate-900/50">
               {uploadedImage ? (
-                <img src={uploadedImage} alt="Upload" className="max-h-full object-contain" />
+                <img src={uploadedImage} alt="Upload" className="max-h-full object-contain rounded-lg" />
               ) : (
-                <div className="text-center">
+                <div className="text-center p-4">
                   <Upload className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-                  <p className="text-slate-400">Upload image</p>
+                  <p className="text-slate-400">Drag & drop your files or</p>
+                  <p className="text-cyan-400 font-medium">click to browse</p>
+                  <p className="text-xs text-slate-500 mt-1">Select a file</p>
                 </div>
               )}
               <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
             </label>
           </div>
 
+          {/* Additional Context */}
           <div>
-            <label className="block text-sm font-medium text-slate-300 mb-3">
-              Extraction Mode
+            <label className="block text-sm font-semibold text-white mb-2">
+              Additional Context (Optional)
             </label>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => setMode('caption')}
-                className={`py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all ${
-                  mode === 'caption'
-                    ? 'border-cyan-500 bg-cyan-500/10 text-cyan-400'
-                    : 'border-slate-600 bg-slate-900/50 text-slate-300 hover:border-slate-500'
-                }`}
-              >
-                Caption
-              </button>
-              <button
-                onClick={() => setMode('ocr')}
-                className={`py-3 px-4 rounded-lg border-2 text-sm font-medium transition-all ${
-                  mode === 'ocr'
-                    ? 'border-cyan-500 bg-cyan-500/10 text-cyan-400'
-                    : 'border-slate-600 bg-slate-900/50 text-slate-300 hover:border-slate-500'
-                }`}
-              >
-                OCR Text
-              </button>
-            </div>
-            <p className="text-xs text-slate-400 mt-2">
-              {mode === 'caption'
-                ? 'Generate a description of the image'
-                : 'Extract text from the image'}
-            </p>
+            <textarea
+              value={additionalContext}
+              onChange={(e) => setAdditionalContext(e.target.value)}
+              placeholder="Specify any requirements for the text extraction (e.g., 'focus on handwritten text' or 'extract table data')"
+              rows={4}
+              className="w-full px-4 py-3 bg-slate-900/50 border border-slate-600 rounded-lg text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 resize-none text-sm"
+            />
           </div>
 
+          {/* Advanced Model Toggle */}
+          <div className="flex items-center justify-between p-4 bg-slate-900/50 rounded-lg border border-slate-600">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">✨</span>
+              <div>
+                <p className="text-sm font-semibold text-white">Use advanced AI model?</p>
+                <p className="text-xs text-blue-400">Best Results <span className="text-slate-500">for better accuracy</span></p>
+              </div>
+            </div>
+            <button
+              onClick={() => setUseAdvancedModel(!useAdvancedModel)}
+              className={`relative w-12 h-6 rounded-full transition-colors ${
+                useAdvancedModel ? 'bg-cyan-500' : 'bg-slate-600'
+              }`}
+            >
+              <div
+                className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-transform ${
+                  useAdvancedModel ? 'translate-x-7' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+
+          {/* Extract Button */}
           <button
-            onClick={() => isVisitor && onRequestAuth && onRequestAuth()}
-            disabled={!uploadedImage}
+            onClick={handleExtractText}
+            disabled={!uploadedImage || isExtracting}
             className="w-full py-4 px-6 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold rounded-lg hover:from-cyan-600 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-cyan-500/30 flex items-center justify-center gap-2"
           >
-            <Type className="w-5 h-5" />
-            Extract {mode === 'caption' ? 'Caption' : 'Text'}
+            <FileText className="w-5 h-5" />
+            {isExtracting ? 'Extracting...' : 'Extract Text'}
           </button>
         </div>
       </div>
 
-      <div className="flex-1 p-6 overflow-y-auto bg-slate-900">
+      {/* Right Side - Results */}
+      <div className="flex-1 p-6 overflow-y-auto">
         {extractedText ? (
-          <div className="max-w-3xl mx-auto">
-            <div className="bg-slate-800 rounded-xl border border-slate-700 p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-white">
-                  {mode === 'caption' ? 'Image Caption' : 'Extracted Text'}
-                </h3>
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-slate-800/50 backdrop-blur border border-slate-700 rounded-2xl p-8">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-2xl font-bold text-white">Extracted Text</h3>
                 <button
                   onClick={handleCopy}
-                  className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm text-white transition-colors"
+                  className="flex items-center gap-2 px-6 py-3 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm font-medium text-white transition-all shadow-lg"
                 >
                   {copied ? (
                     <>
                       <Check className="w-4 h-4" />
-                      Copied
+                      Copied!
                     </>
                   ) : (
                     <>
                       <Copy className="w-4 h-4" />
-                      Copy
+                      Copy Text
                     </>
                   )}
                 </button>
               </div>
-              <div className="text-slate-300 leading-relaxed whitespace-pre-wrap">
-                {extractedText}
+              <div className="bg-slate-900/50 rounded-lg p-6 border border-slate-700">
+                <p className="text-slate-200 leading-relaxed whitespace-pre-wrap">
+                  {extractedText}
+                </p>
               </div>
             </div>
           </div>
@@ -126,11 +155,11 @@ export default function ImageToText({ isVisitor = false, onRequestAuth }: ImageT
           <div className="h-full flex items-center justify-center">
             <div className="text-center max-w-md">
               <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 rounded-full flex items-center justify-center">
-                <Type className="w-12 h-12 text-cyan-400" />
+                <FileText className="w-12 h-12 text-cyan-400" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-2">Image to Text</h3>
-              <p className="text-slate-400">
-                Extract text from images or generate captions with AI
+              <h3 className="text-2xl font-semibold text-white mb-3">Upload an image to see extracted text here.</h3>
+              <p className="text-slate-400 text-lg">
+                Extract text from images using advanced AI + OCR
               </p>
             </div>
           </div>
