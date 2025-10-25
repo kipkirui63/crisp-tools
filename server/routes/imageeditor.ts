@@ -3,7 +3,7 @@ import { Router, Response } from 'express';
 import multer from 'multer';
 import { getDispatcher } from '../services/imageDispatcher';
 import { db } from '../db';
-import { aiModels, generations, users } from '../db/schema';
+import { aiModels, generationJobs, users } from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 
@@ -107,7 +107,7 @@ router.post('/image-edit', requireAuth, upload.fields([
 
     // Save generation record
     const [generation] = await db
-      .insert(generations)
+      .insert(generationJobs)
       .values({
         userId,
         modelId: model.id,
@@ -220,7 +220,7 @@ router.post('/batch-edit', requireAuth, upload.array('images', 10), async (req: 
     const savedGenerations = [];
     for (const edit of editedImages) {
       const [generation] = await db
-        .insert(generations)
+        .insert(generationJobs)
         .values({
           userId,
           modelId: model.id,
@@ -262,7 +262,7 @@ router.get('/history', requireAuth, async (req: AuthRequest, res: Response) => {
     const userId = req.user!.id;
     const limit = parseInt(req.query.limit as string) || 20;
 
-    const edits = await db.query.generations.findMany({
+    const edits = await db.query.generationJobs.findMany({
       where: (gens) => eq(gens.userId, userId),
       orderBy: (gens) => gens.createdAt,
       limit,

@@ -7,6 +7,8 @@ import authRoutes from './routes/auth';
 import modelsRoutes from './routes/models';
 import generationsRoutes from './routes/generations';
 import subscriptionsRoutes from './routes/subscriptions';
+import imageEditorRoutes from './routes/imageeditor';
+import stripeRoutes from './routes/stripe';
 import { setupVite } from './vite';
 
 dotenv.config();
@@ -19,6 +21,9 @@ app.use(cors({
   credentials: true,
 }));
 
+// Stripe webhook needs raw body
+app.post('/api/stripe/webhook', express.raw({ type: 'application/json' }), stripeRoutes);
+
 app.use(express.json());
 app.use(cookieParser());
 
@@ -26,6 +31,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/models', modelsRoutes);
 app.use('/api/generationJobs', generationsRoutes);
 app.use('/api/subscriptions', subscriptionsRoutes);
+app.use('/api/image-edit', imageEditorRoutes);
+app.use('/api/stripe', stripeRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });
