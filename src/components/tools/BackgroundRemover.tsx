@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Upload, Image, Eraser, Wand2 } from 'lucide-react';
+import { Upload, Image, Eraser, Wand2, Loader2, Download } from 'lucide-react';
 
 interface BackgroundRemoverProps {
   isAuthenticated: boolean;
@@ -8,38 +8,81 @@ interface BackgroundRemoverProps {
 
 export default function BackgroundRemover({ isAuthenticated, onRequestAuth }: BackgroundRemoverProps) {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [processedImage, setProcessedImage] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [replaceBackground, setReplaceBackground] = useState(false);
   const [backgroundColor, setBackgroundColor] = useState('#ffffff');
+  const [error, setError] = useState<string | null>(null);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setUploadedFile(file);
       const reader = new FileReader();
       reader.onload = (event) => setUploadedImage(event.target?.result as string);
       reader.readAsDataURL(file);
+      setProcessedImage(null);
+      setError(null);
     }
   };
 
-  // Simulate background removal process
-  const handleRemoveBackground = () => {
+  const handleRemoveBackground = async () => {
     if (!isAuthenticated) {
       onRequestAuth();
       return;
     }
 
-    if (!uploadedImage) return;
+    if (!uploadedFile) {
+      setError('Please upload an image first');
+      return;
+    }
+
     setIsProcessing(true);
     setProcessedImage(null);
+    setError(null);
 
-    // Simulate a 2s AI background removal delay
-    setTimeout(() => {
-      // In production, replace this with your AI API endpoint
-      // For demo: show same image pretending background was removed
-      setProcessedImage(uploadedImage);
+    try {
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('image', uploadedFile);
+      formData.append('replaceBackground', replaceBackground.toString());
+      if (replaceBackground) {
+        formData.append('backgroundColor', backgroundColor);
+      }
+
+      const response = await fetch('/api/background-removal/remove', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to remove background');
+      }
+
+      const data = await response.json();
+      setProcessedImage(data.imageUrl);
+    } catch (error: any) {
+      console.error('Background removal error:', error);
+      setError(error.message || 'Failed to remove background');
+    } finally {
       setIsProcessing(false);
-    }, 2000);
+    }
+  };
+
+  const downloadImage = () => {
+    if (processedImage) {
+      const link = document.createElement('a');
+      link.href = processedImage;
+      link.download = 'background-removed.png';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   return (
@@ -122,14 +165,23 @@ export default function BackgroundRemover({ isAuthenticated, onRequestAuth }: Ba
             </div>
           )}
 
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-sm">
+              {error}
+            </div>
+          )}
+
           {/* Remove Background Button */}
           <button
             onClick={handleRemoveBackground}
             disabled={!uploadedImage || isProcessing}
-            className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 shadow-lg shadow-cyan-500/30"
+            className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-cyan-500/30"
           >
             {isProcessing ? (
-              <span className="animate-pulse">Processing...</span>
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Processing...
+              </>
             ) : (
               <>
                 <Wand2 className="w-5 h-5" />
@@ -142,16 +194,38 @@ export default function BackgroundRemover({ isAuthenticated, onRequestAuth }: Ba
         {/* RIGHT PANEL */}
         <div className="flex-1 flex items-center justify-center p-10 bg-slate-900">
           {processedImage ? (
-            <div className="max-w-md w-full flex flex-col items-center">
-              <img
-                src={processedImage}
-                alt="Processed"
-                className="w-full rounded-xl border border-slate-700 mb-4 object-contain"
-                style={{ backgroundColor: replaceBackground ? backgroundColor : 'transparent' }}
-              />
-              <p className="text-slate-400 text-sm">
-                Background {replaceBackground ? 'replaced' : 'removed'} successfully.
-              </p>
+            <div className="max-w-2xl w-full">
+              <div className="relative group">
+                <div className="bg-slate-800 rounded-xl p-4">
+                  <img
+                    src={processedImage}
+                    alt="Processed"
+                    className="w-full rounded-lg object-contain"
+                    style={{ backgroundColor: replaceBackground ? 'transparent' : 'transparent' }}
+                  />
+                </div>
+                <button
+                  onClick={downloadImage}
+                  className="absolute top-6 right-6 p-3 bg-slate-800/90 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-slate-700"
+                >
+                  <Download className="w-6 h-6 text-cyan-400" />
+                </button>
+              </div>
+              <div className="mt-4 text-center">
+                <p className="text-slate-400 text-sm mb-4">
+                  Background {replaceBackground ? 'replaced' : 'removed'} successfully.
+                </p>
+                <button
+                  onClick={() => {
+                    setProcessedImage(null);
+                    setUploadedImage(null);
+                    setUploadedFile(null);
+                  }}
+                  className="px-6 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"
+                >
+                  Process Another Image
+                </button>
+              </div>
             </div>
           ) : (
             <div className="text-center max-w-md">

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Upload, Palette, Wand2, X } from 'lucide-react';
+import { Upload, Palette, Wand2, X, Loader2, Download } from 'lucide-react';
 
 interface ModelOption {
   id: string;
@@ -16,11 +16,14 @@ interface LogoGeneratorProps {
 
 export default function LogoGenerator({ isAuthenticated, onRequestAuth }: LogoGeneratorProps) {
   const [logoDescription, setLogoDescription] = useState('');
-  const [uploadedImages, setUploadedImages] = useState<string[]>([]);
+  const [uploadedImages, setUploadedImages] = useState<File[]>([]);
   const [selectedModel, setSelectedModel] = useState<ModelOption | null>(null);
   const [showModelModal, setShowModelModal] = useState(false);
   const [logoStyle, setLogoStyle] = useState('Any Style');
   const [numDesigns, setNumDesigns] = useState(4);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedLogos, setGeneratedLogos] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
 
   const models: ModelOption[] = [
     {
@@ -56,9 +59,86 @@ export default function LogoGenerator({ isAuthenticated, onRequestAuth }: LogoGe
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
-      const newImages = Array.from(files).map((file) => URL.createObjectURL(file));
-      setUploadedImages(newImages);
+      setUploadedImages(Array.from(files));
     }
+  };
+
+  const handleGenerate = async () => {
+    if (!isAuthenticated) {
+      onRequestAuth();
+      return;
+    }
+
+    if (!logoDescription.trim()) {
+      setError('Please provide a logo description');
+      return;
+    }
+
+    if (!selectedModel) {
+      setError('Please select an AI model');
+      return;
+    }
+
+    setIsGenerating(true);
+    setError(null);
+    setGeneratedLogos([]);
+
+    try {
+      const token = localStorage.getItem('token');
+      const logos: string[] = [];
+
+      for (let i = 0; i < numDesigns; i++) {
+        const formData = new FormData();
+
+        let fullPrompt = `Professional logo design: ${logoDescription}`;
+        if (logoStyle !== 'Any Style') {
+          fullPrompt += ` in ${logoStyle} style`;
+        }
+        fullPrompt += '. Clean, simple, memorable, vector-style, professional branding.';
+
+        formData.append('prompt', fullPrompt);
+        formData.append('modelId', selectedModel.id);
+        formData.append('width', '1024');
+        formData.append('height', '1024');
+
+        if (uploadedImages.length > 0) {
+          uploadedImages.forEach((file) => {
+            formData.append('references', file);
+          });
+        }
+
+        const response = await fetch('/api/generationJobs', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+          },
+          body: formData,
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to generate logo');
+        }
+
+        const data = await response.json();
+        logos.push(data.imageUrl);
+        setGeneratedLogos([...logos]);
+      }
+    } catch (error: any) {
+      console.error('Logo generation error:', error);
+      setError(error.message || 'Failed to generate logos');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const downloadImage = (url: string, index: number) => {
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `logo-${index + 1}.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const handleModelSelect = (model: ModelOption) => {
@@ -112,10 +192,10 @@ export default function LogoGenerator({ isAuthenticated, onRequestAuth }: LogoGe
 
             {uploadedImages.length > 0 && (
               <div className="mt-4 grid grid-cols-3 gap-2">
-                {uploadedImages.map((src, i) => (
+                {uploadedImages.map((file, i) => (
                   <img
                     key={i}
-                    src={src}
+                    src={URL.createObjectURL(file)}
                     alt={`Upload ${i}`}
                     className="rounded-lg object-cover w-full h-24 border border-slate-700"
                   />
@@ -174,29 +254,72 @@ export default function LogoGenerator({ isAuthenticated, onRequestAuth }: LogoGe
             </select>
           </div>
 
+          {error && (
+            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-sm">
+              {error}
+            </div>
+          )}
+
           {/* Generate Button */}
           <button
-            disabled={!logoDescription.trim()}
-            className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            onClick={handleGenerate}
+            disabled={!logoDescription.trim() || isGenerating}
+            className="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-500 hover:from-cyan-600 hover:to-blue-600 text-white font-semibold rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Wand2 className="w-5 h-5" />
-            Generate
+            {isGenerating ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Generating... {generatedLogos.length}/{numDesigns}
+              </>
+            ) : (
+              <>
+                <Wand2 className="w-5 h-5" />
+                Generate
+              </>
+            )}
           </button>
         </div>
 
         {/* RIGHT PANEL */}
-        <div className="flex-1 flex items-center justify-center p-10 bg-slate-900">
-          <div className="text-center">
-            <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 rounded-full flex items-center justify-center">
-              <Palette className="w-12 h-12 text-cyan-400" />
+        <div className="flex-1 p-10 bg-slate-900 overflow-y-auto">
+          {generatedLogos.length === 0 && !isGenerating ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 rounded-full flex items-center justify-center">
+                  <Palette className="w-12 h-12 text-cyan-400" />
+                </div>
+                <h3 className="text-lg font-semibold text-white mb-2">
+                  Your generated logos will appear here
+                </h3>
+                <p className="text-slate-400 text-sm">
+                  Provide your inputs and click generate.
+                </p>
+              </div>
             </div>
-            <h3 className="text-lg font-semibold text-white mb-2">
-              Your generated logos will appear here
-            </h3>
-            <p className="text-slate-400 text-sm">
-              Provide your inputs and click generate.
-            </p>
-          </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-6">
+              {generatedLogos.map((logoUrl, idx) => (
+                <div key={idx} className="relative group">
+                  <img
+                    src={logoUrl}
+                    alt={`Logo ${idx + 1}`}
+                    className="w-full h-auto rounded-lg border border-slate-700 bg-white"
+                  />
+                  <button
+                    onClick={() => downloadImage(logoUrl, idx)}
+                    className="absolute top-2 right-2 p-2 bg-slate-800/90 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-slate-700"
+                  >
+                    <Download className="w-5 h-5 text-cyan-400" />
+                  </button>
+                </div>
+              ))}
+              {isGenerating && generatedLogos.length < numDesigns && (
+                <div className="flex items-center justify-center border-2 border-dashed border-slate-700 rounded-lg h-64">
+                  <Loader2 className="w-12 h-12 text-cyan-400 animate-spin" />
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 

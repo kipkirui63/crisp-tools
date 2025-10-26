@@ -9,6 +9,8 @@ import generationsRoutes from './routes/generations';
 import subscriptionsRoutes from './routes/subscriptions';
 import imageEditorRoutes from './routes/imageeditor';
 import stripeRoutes from './routes/stripe';
+import backgroundRemovalRoutes from './routes/background-removal';
+import ocrRoutes from './routes/ocr';
 import { setupVite } from './vite';
 
 dotenv.config();
@@ -33,6 +35,8 @@ app.use('/api/generationJobs', generationsRoutes);
 app.use('/api/subscriptions', subscriptionsRoutes);
 app.use('/api/image-edit', imageEditorRoutes);
 app.use('/api/stripe', stripeRoutes);
+app.use('/api/background-removal', backgroundRemovalRoutes);
+app.use('/api/ocr', ocrRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Upload, User, Wand2 } from 'lucide-react';
+import { Upload, User, Wand2, Loader2, Download } from 'lucide-react';
 
 interface HeadshotGeneratorProps {
   isAuthenticated: boolean;
@@ -8,7 +8,11 @@ interface HeadshotGeneratorProps {
 
 export default function HeadshotGenerator({ isAuthenticated, onRequestAuth }: HeadshotGeneratorProps) {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [style, setStyle] = useState('professional');
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generatedHeadshot, setGeneratedHeadshot] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const styles = [
     { id: 'professional', name: 'Professional', desc: 'Corporate headshot' },
@@ -20,9 +24,78 @@ export default function HeadshotGenerator({ isAuthenticated, onRequestAuth }: He
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setUploadedFile(file);
       const reader = new FileReader();
       reader.onload = (e) => setUploadedImage(e.target?.result as string);
       reader.readAsDataURL(file);
+    }
+  };
+
+  const handleGenerate = async () => {
+    if (!isAuthenticated) {
+      onRequestAuth();
+      return;
+    }
+
+    if (!uploadedFile) {
+      setError('Please upload a photo first');
+      return;
+    }
+
+    setIsGenerating(true);
+    setError(null);
+    setGeneratedHeadshot(null);
+
+    try {
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+
+      const styleDescriptions = {
+        professional: 'professional corporate headshot, business attire, studio lighting, neutral background',
+        casual: 'casual friendly portrait, natural lighting, soft focus, approachable',
+        artistic: 'artistic creative portrait, dramatic lighting, unique composition, expressive',
+        linkedin: 'professional LinkedIn profile photo, business casual, clean background, confident'
+      };
+
+      const prompt = `High-quality ${styleDescriptions[style as keyof typeof styleDescriptions]}, professional photography, sharp focus, 8k resolution`;
+
+      formData.append('image', uploadedFile);
+      formData.append('prompt', prompt);
+      formData.append('modelId', 'gpt-image-1');
+      formData.append('width', '1024');
+      formData.append('height', '1024');
+
+      const response = await fetch('/api/generationJobs', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate headshot');
+      }
+
+      const data = await response.json();
+      setGeneratedHeadshot(data.imageUrl);
+    } catch (error: any) {
+      console.error('Headshot generation error:', error);
+      setError(error.message || 'Failed to generate headshot');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const downloadHeadshot = () => {
+    if (generatedHeadshot) {
+      const link = document.createElement('a');
+      link.href = generatedHeadshot;
+      link.download = 'professional-headshot.png';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
   };
 
@@ -70,28 +143,69 @@ export default function HeadshotGenerator({ isAuthenticated, onRequestAuth }: He
             </div>
           </div>
 
+          {error && (
+            <div className="p-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-sm">
+              {error}
+            </div>
+          )}
+
           <button
-            onClick={() => !isAuthenticated ? onRequestAuth() : null}
-            disabled={!uploadedImage}
+            onClick={handleGenerate}
+            disabled={!uploadedImage || isGenerating}
             className="w-full py-4 px-6 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold rounded-lg hover:from-cyan-600 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-cyan-500/30 flex items-center justify-center gap-2"
           >
-            <Wand2 className="w-5 h-5" />
-            Generate Headshot
+            {isGenerating ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Generating...
+              </>
+            ) : (
+              <>
+                <Wand2 className="w-5 h-5" />
+                Generate Headshot
+              </>
+            )}
           </button>
         </div>
       </div>
 
       <div className="flex-1 p-6 overflow-y-auto bg-slate-900">
         <div className="h-full flex items-center justify-center">
-          <div className="text-center max-w-md">
-            <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 rounded-full flex items-center justify-center">
-              <User className="w-12 h-12 text-cyan-400" />
+          {!generatedHeadshot ? (
+            <div className="text-center max-w-md">
+              <div className="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-cyan-500/20 to-blue-500/20 rounded-full flex items-center justify-center">
+                <User className="w-12 h-12 text-cyan-400" />
+              </div>
+              <h3 className="text-xl font-semibold text-white mb-2">AI Headshot Generator</h3>
+              <p className="text-slate-400">
+                Transform your photos into professional headshots with AI
+              </p>
             </div>
-            <h3 className="text-xl font-semibold text-white mb-2">AI Headshot Generator</h3>
-            <p className="text-slate-400">
-              Transform your photos into professional headshots with AI
-            </p>
-          </div>
+          ) : (
+            <div className="max-w-2xl w-full">
+              <div className="relative group">
+                <img
+                  src={generatedHeadshot}
+                  alt="Generated Headshot"
+                  className="w-full h-auto rounded-lg border border-slate-700"
+                />
+                <button
+                  onClick={downloadHeadshot}
+                  className="absolute top-4 right-4 p-3 bg-slate-800/90 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-slate-700"
+                >
+                  <Download className="w-6 h-6 text-cyan-400" />
+                </button>
+              </div>
+              <div className="mt-4 text-center">
+                <button
+                  onClick={() => setGeneratedHeadshot(null)}
+                  className="px-6 py-2 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"
+                >
+                  Generate Another
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

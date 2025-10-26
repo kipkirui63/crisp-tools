@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Upload,  Copy, Check, FileText } from 'lucide-react';
+import { Upload, Copy, Check, FileText, Loader2, AlertCircle } from 'lucide-react';
 
 interface ImageToTextProps {
   isAuthenticated: boolean;
@@ -8,41 +8,78 @@ interface ImageToTextProps {
 
 export default function AIImageToText({ isAuthenticated, onRequestAuth }: ImageToTextProps) {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [extractedText, setExtractedText] = useState('');
   const [additionalContext, setAdditionalContext] = useState('');
   const [useAdvancedModel, setUseAdvancedModel] = useState(false);
   const [copied, setCopied] = useState(false);
   const [isExtracting, setIsExtracting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
+      setUploadedFile(file);
       const reader = new FileReader();
       reader.onload = (e) => setUploadedImage(e.target?.result as string);
       reader.readAsDataURL(file);
+      setExtractedText('');
+      setError(null);
     }
   };
 
   const handleExtractText = async () => {
-    if (!uploadedImage) {
-      alert('Please upload an image first');
+    if (!isAuthenticated) {
+      onRequestAuth();
+      return;
+    }
+
+    if (!uploadedFile) {
+      setError('Please upload an image first');
       return;
     }
 
     setIsExtracting(true);
-    
-    // Simulate text extraction
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    const sampleText = `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.
+    setError(null);
+    setExtractedText('');
 
-This is extracted text from your image. In a real implementation, this would use OCR technology to recognize and extract actual text from the uploaded image.
+    try {
+      const token = localStorage.getItem('token');
+      const formData = new FormData();
+      formData.append('image', uploadedFile);
+      formData.append('context', additionalContext);
+      formData.append('useAdvanced', useAdvancedModel.toString());
 
-${additionalContext ? `\nAdditional Context Applied: ${additionalContext}` : ''}
-${useAdvancedModel ? '\n[Using Advanced AI Model for better accuracy]' : ''}`;
-    
-    setExtractedText(sampleText);
-    setIsExtracting(false);
+      const response = await fetch('/api/ocr/extract', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to extract text');
+      }
+
+      const data = await response.json();
+
+      let resultText = data.text;
+      if (additionalContext) {
+        resultText += `\n\n--- Additional Context Applied ---\n${additionalContext}`;
+      }
+      if (useAdvancedModel) {
+        resultText += '\n\n[Extracted using Advanced AI Model]';
+      }
+
+      setExtractedText(resultText);
+    } catch (error: any) {
+      console.error('OCR extraction error:', error);
+      setError(error.message || 'Failed to extract text from image');
+    } finally {
+      setIsExtracting(false);
+    }
   };
 
   const handleCopy = () => {
@@ -113,14 +150,30 @@ ${useAdvancedModel ? '\n[Using Advanced AI Model for better accuracy]' : ''}`;
             </button>
           </div>
 
+          {error && (
+            <div className="p-3 bg-red-500/10 border border-red-500/50 rounded-lg text-red-400 text-sm flex items-start gap-2">
+              <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
+
           {/* Extract Button */}
           <button
             onClick={handleExtractText}
             disabled={!uploadedImage || isExtracting}
             className="w-full py-4 px-6 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-semibold rounded-lg hover:from-cyan-600 hover:to-blue-600 focus:outline-none focus:ring-2 focus:ring-cyan-500 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-cyan-500/30 flex items-center justify-center gap-2"
           >
-            <FileText className="w-5 h-5" />
-            {isExtracting ? 'Extracting...' : 'Extract Text'}
+            {isExtracting ? (
+              <>
+                <Loader2 className="w-5 h-5 animate-spin" />
+                Extracting...
+              </>
+            ) : (
+              <>
+                <FileText className="w-5 h-5" />
+                Extract Text
+              </>
+            )}
           </button>
         </div>
       </div>
