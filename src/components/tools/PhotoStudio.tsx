@@ -87,21 +87,81 @@ export default function AIPhotoGenerator({ isAuthenticated, onRequestAuth }: Pho
     setTrainingImages([]);
   };
 
-  const handleGenerateImage = () => {
+  const handleGenerateImage = async () => {
+    if (!isAuthenticated) {
+      onRequestAuth();
+      return;
+    }
+
     if (!selectedModel || !prompt) {
       alert('Please select a model and enter a prompt');
       return;
     }
 
-    // Simulate image generation
-    const newImage: GeneratedImage = {
-      id: Date.now().toString(),
-      url: selectedModel.images[0], // Use first training image as placeholder
-      prompt: prompt
-    };
-    
-    setGeneratedImages([newImage, ...generatedImages]);
-    setPrompt('');
+    setIsTraining(true);
+
+    try {
+      const token = localStorage.getItem('token');
+
+      // Get first available model
+      const modelsResponse = await fetch('/api/models', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!modelsResponse.ok) {
+        throw new Error('Failed to load models');
+      }
+
+      const modelsData = await modelsResponse.json();
+      const firstModel = modelsData.models?.[0];
+
+      if (!firstModel) {
+        throw new Error('No models available');
+      }
+
+      const fullPrompt = `${prompt}. ${lighting} lighting. ${background} background.`;
+
+      const response = await fetch('/api/generationJobs', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          modelId: firstModel.id,
+          toolType: 'photo-studio',
+          prompt: fullPrompt,
+          options: {
+            numberOfImages: 1,
+            width: 1024,
+            height: 1024,
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to generate image');
+      }
+
+      const data = await response.json();
+
+      const newImage: GeneratedImage = {
+        id: Date.now().toString(),
+        url: data.imageUrl,
+        prompt: prompt
+      };
+
+      setGeneratedImages([newImage, ...generatedImages]);
+      setPrompt('');
+    } catch (error: any) {
+      console.error('Photo generation error:', error);
+      alert(error.message || 'Failed to generate photo');
+    } finally {
+      setIsTraining(false);
+    }
   };
 
   const openStudio = (model: Model) => {

@@ -59,18 +59,40 @@ export default function HeadshotGenerator({ isAuthenticated, onRequestAuth }: He
 
       const prompt = `High-quality ${styleDescriptions[style as keyof typeof styleDescriptions]}, professional photography, sharp focus, 8k resolution`;
 
-      formData.append('image', uploadedFile);
-      formData.append('prompt', prompt);
-      formData.append('modelId', 'gpt-image-1');
-      formData.append('width', '1024');
-      formData.append('height', '1024');
+      // Get first available model
+      const modelsResponse = await fetch('/api/models', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!modelsResponse.ok) {
+        throw new Error('Failed to load models');
+      }
+
+      const modelsData = await modelsResponse.json();
+      const firstModel = modelsData.models?.[0];
+
+      if (!firstModel) {
+        throw new Error('No models available');
+      }
 
       const response = await fetch('/api/generationJobs', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
-        body: formData,
+        body: JSON.stringify({
+          modelId: firstModel.id,
+          toolType: 'headshot-generator',
+          prompt,
+          options: {
+            numberOfImages: 1,
+            width: 1024,
+            height: 1024,
+          },
+        }),
       });
 
       if (!response.ok) {

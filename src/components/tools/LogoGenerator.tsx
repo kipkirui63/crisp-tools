@@ -87,32 +87,47 @@ export default function LogoGenerator({ isAuthenticated, onRequestAuth }: LogoGe
       const token = localStorage.getItem('token');
       const logos: string[] = [];
 
-      for (let i = 0; i < numDesigns; i++) {
-        const formData = new FormData();
+      // Get first available model
+      const modelsResponse = await fetch('/api/models', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
 
+      if (!modelsResponse.ok) {
+        throw new Error('Failed to load models');
+      }
+
+      const modelsData = await modelsResponse.json();
+      const firstModel = modelsData.models?.[0];
+
+      if (!firstModel) {
+        throw new Error('No models available');
+      }
+
+      for (let i = 0; i < numDesigns; i++) {
         let fullPrompt = `Professional logo design: ${logoDescription}`;
         if (logoStyle !== 'Any Style') {
           fullPrompt += ` in ${logoStyle} style`;
         }
         fullPrompt += '. Clean, simple, memorable, vector-style, professional branding.';
 
-        formData.append('prompt', fullPrompt);
-        formData.append('modelId', selectedModel.id);
-        formData.append('width', '1024');
-        formData.append('height', '1024');
-
-        if (uploadedImages.length > 0) {
-          uploadedImages.forEach((file) => {
-            formData.append('references', file);
-          });
-        }
-
         const response = await fetch('/api/generationJobs', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
           },
-          body: formData,
+          body: JSON.stringify({
+            modelId: firstModel.id,
+            toolType: 'logo-generator',
+            prompt: fullPrompt,
+            options: {
+              numberOfImages: 1,
+              width: 1024,
+              height: 1024,
+            },
+          }),
         });
 
         if (!response.ok) {

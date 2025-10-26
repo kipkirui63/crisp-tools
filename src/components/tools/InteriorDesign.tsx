@@ -122,7 +122,6 @@ export default function AIInteriorDesign({ isAuthenticated, onRequestAuth }: Int
 
     try {
       const token = localStorage.getItem('token');
-      const formData = new FormData();
 
       let prompt = `Interior design transformation: ${designStyle} style ${roomType.toLowerCase()}.`;
       prompt += ` Professional interior design, high-quality finishes, beautiful lighting, modern furniture.`;
@@ -131,18 +130,40 @@ export default function AIInteriorDesign({ isAuthenticated, onRequestAuth }: Int
         prompt += ` Additional requirements: ${customRequirements}`;
       }
 
-      formData.append('image', uploadedFile);
-      formData.append('prompt', prompt);
-      formData.append('modelId', selectedModel);
-      formData.append('width', '1024');
-      formData.append('height', '1024');
+      // Get first available model
+      const modelsResponse = await fetch('/api/models', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
+
+      if (!modelsResponse.ok) {
+        throw new Error('Failed to load models');
+      }
+
+      const modelsData = await modelsResponse.json();
+      const firstModel = modelsData.models?.[0];
+
+      if (!firstModel) {
+        throw new Error('No models available');
+      }
 
       const response = await fetch('/api/generationJobs', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
-        body: formData,
+        body: JSON.stringify({
+          modelId: firstModel.id,
+          toolType: 'interior-design',
+          prompt,
+          options: {
+            numberOfImages: 1,
+            width: 1024,
+            height: 1024,
+          },
+        }),
       });
 
       if (!response.ok) {

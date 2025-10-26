@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Upload, Image, Eraser, Wand2, Loader2, Download } from 'lucide-react';
+import { Upload, Image, Eraser, Wand2, Loader2, Download, X } from 'lucide-react';
 
 interface BackgroundRemoverProps {
   isAuthenticated: boolean;
@@ -101,26 +101,42 @@ export default function BackgroundRemover({ isAuthenticated, onRequestAuth }: Ba
             <label className="block text-sm font-medium text-slate-300 mb-2">
               Upload Your Image
             </label>
-            <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-slate-600 rounded-xl cursor-pointer hover:border-cyan-500 transition-all bg-slate-900/50">
-              {uploadedImage ? (
-                <img
-                  src={uploadedImage}
-                  alt="Uploaded"
-                  className="max-h-full object-contain rounded-lg"
+            <div className="relative">
+              <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-slate-600 rounded-xl cursor-pointer hover:border-cyan-500 transition-all bg-slate-900/50">
+                {uploadedImage ? (
+                  <img
+                    src={uploadedImage}
+                    alt="Uploaded"
+                    className="max-h-full object-contain rounded-lg"
+                  />
+                ) : (
+                  <div className="text-center">
+                    <Upload className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+                    <p className="text-slate-400 text-sm">Drag & drop or click to browse</p>
+                  </div>
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
                 />
-              ) : (
-                <div className="text-center">
-                  <Upload className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-                  <p className="text-slate-400 text-sm">Drag & drop or click to browse</p>
-                </div>
+              </label>
+              {uploadedImage && !isProcessing && (
+                <button
+                  onClick={() => {
+                    setUploadedImage(null);
+                    setUploadedFile(null);
+                    setProcessedImage(null);
+                    setError(null);
+                  }}
+                  className="absolute top-2 right-2 p-2 bg-red-500/90 hover:bg-red-600 rounded-lg transition-colors"
+                  title="Remove image"
+                >
+                  <X className="w-5 h-5 text-white" />
+                </button>
               )}
-              <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-            </label>
+            </div>
             <p className="text-xs text-slate-400 mt-2">
               Upload an image to remove its background instantly.
             </p>

@@ -125,7 +125,7 @@ export default function ImageEditor({ isAuthenticated, onRequestAuth }: ImageEdi
         formData.append('references', file);
       });
 
-      const response = await fetch('/api/generations/image-edit', {
+      const response = await fetch('/api/image-edit/image-edit', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('token')}`,
