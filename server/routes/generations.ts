@@ -31,7 +31,7 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Get model from database
+    // Get model from database (modelId is a UUID string)
     const model = await db.query.aiModels.findFirst({
       where: eq(aiModels.id, modelId),
     });

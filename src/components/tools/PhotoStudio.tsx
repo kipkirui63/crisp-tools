@@ -148,9 +148,14 @@ export default function AIPhotoGenerator({ isAuthenticated, onRequestAuth }: Pho
 
       const data = await response.json();
 
+      const imageUrl = data.images?.[0] || data.imageUrl;
+      if (!imageUrl) {
+        throw new Error('No image URL in response');
+      }
+
       const newImage: GeneratedImage = {
         id: Date.now().toString(),
-        url: data.imageUrl,
+        url: imageUrl,
         prompt: prompt
       };
 

@@ -42,7 +42,7 @@ router.post('/image-edit', requireAuth, upload.fields([
 
     // Get model
     const model = await db.query.aiModels.findFirst({
-      where: eq(aiModels.id, parseInt(modelId)),
+      where: eq(aiModels.id, modelId),
     });
 
     if (!model) {
@@ -158,7 +158,7 @@ router.post('/batch-edit', requireAuth, upload.array('images', 10), async (req: 
 
     // Get model
     const model = await db.query.aiModels.findFirst({
-      where: eq(aiModels.id, parseInt(modelId)),
+      where: eq(aiModels.id, modelId),
     });
 
     if (!model) {

@@ -173,9 +173,14 @@ export default function AIInteriorDesign({ isAuthenticated, onRequestAuth }: Int
 
       const data = await response.json();
 
+      const imageUrl = data.images?.[0] || data.imageUrl;
+      if (!imageUrl) {
+        throw new Error('No image URL in response');
+      }
+
       const newImage: GeneratedImage = {
         id: Date.now().toString(),
-        url: data.imageUrl,
+        url: imageUrl,
         roomType: roomType,
         style: designStyle
       };

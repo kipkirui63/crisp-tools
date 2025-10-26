@@ -84,7 +84,7 @@ export default function HeadshotGenerator({ isAuthenticated, onRequestAuth }: He
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          modelId: firstModel.id,
+          modelId: firstModel.id, // UUID string
           toolType: 'headshot-generator',
           prompt,
           options: {
@@ -101,7 +101,11 @@ export default function HeadshotGenerator({ isAuthenticated, onRequestAuth }: He
       }
 
       const data = await response.json();
-      setGeneratedHeadshot(data.imageUrl);
+      const imageUrl = data.images?.[0] || data.imageUrl;
+      if (!imageUrl) {
+        throw new Error('No image URL in response');
+      }
+      setGeneratedHeadshot(imageUrl);
     } catch (error: any) {
       console.error('Headshot generation error:', error);
       setError(error.message || 'Failed to generate headshot');

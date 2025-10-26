@@ -136,7 +136,11 @@ export default function LogoGenerator({ isAuthenticated, onRequestAuth }: LogoGe
         }
 
         const data = await response.json();
-        logos.push(data.imageUrl);
+        const imageUrl = data.images?.[0] || data.imageUrl;
+        if (!imageUrl) {
+          throw new Error('No image URL in response');
+        }
+        logos.push(imageUrl);
         setGeneratedLogos([...logos]);
       }
     } catch (error: any) {
