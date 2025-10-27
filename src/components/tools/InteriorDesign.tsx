@@ -123,8 +123,8 @@ export default function AIInteriorDesign({ isAuthenticated, onRequestAuth }: Int
     try {
       const token = localStorage.getItem('token');
 
-      let prompt = `Interior design transformation: ${designStyle} style ${roomType.toLowerCase()}.`;
-      prompt += ` Professional interior design, high-quality finishes, beautiful lighting, modern furniture.`;
+      let prompt = `Transform this ${roomType.toLowerCase()} image into ${designStyle} style interior design.`;
+      prompt += ` Maintain the room's structure and proportions. Apply professional interior design elements, high-quality finishes, beautiful lighting, appropriate furniture for the style. Photorealistic result.`;
 
       if (customRequirements) {
         prompt += ` Additional requirements: ${customRequirements}`;
@@ -194,13 +194,28 @@ export default function AIInteriorDesign({ isAuthenticated, onRequestAuth }: Int
     }
   };
 
-  const downloadImage = (url: string, id: string) => {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `interior-design-${id}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const downloadImage = async (url: string, id: string) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = `interior-design-${id}-${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(objectUrl);
+    } catch (error) {
+      console.error('Download failed:', error);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `interior-design-${id}-${Date.now()}.png`;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   return (
@@ -213,19 +228,34 @@ export default function AIInteriorDesign({ isAuthenticated, onRequestAuth }: Int
             <label className="block text-sm font-medium text-slate-300 mb-2">
               Upload Room Photo
             </label>
-            <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer hover:border-cyan-500 transition-all bg-slate-900/50">
-              {uploadedImage ? (
-                <img src={uploadedImage} alt="Room" className="max-h-full rounded-lg object-contain" />
-              ) : (
-                <div className="text-center p-4">
-                  <Upload className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-                  <p className="text-slate-400">Drag & drop your files or</p>
-                  <p className="text-cyan-400 font-medium">click to browse</p>
-                  <p className="text-xs text-slate-500 mt-1">Select a file</p>
-                </div>
+            <div className="relative">
+              <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer hover:border-cyan-500 transition-all bg-slate-900/50">
+                {uploadedImage ? (
+                  <img src={uploadedImage} alt="Room" className="max-h-full rounded-lg object-contain" />
+                ) : (
+                  <div className="text-center p-4">
+                    <Upload className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+                    <p className="text-slate-400">Drag & drop your files or</p>
+                    <p className="text-cyan-400 font-medium">click to browse</p>
+                    <p className="text-xs text-slate-500 mt-1">Select a file</p>
+                  </div>
+                )}
+                <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+              </label>
+              {uploadedImage && !isGenerating && (
+                <button
+                  onClick={() => {
+                    setUploadedImage(null);
+                    setUploadedFile(null);
+                    setError(null);
+                  }}
+                  className="absolute top-2 right-2 p-2 bg-red-500/90 hover:bg-red-600 rounded-lg transition-colors"
+                  title="Remove image"
+                >
+                  <X className="w-5 h-5 text-white" />
+                </button>
               )}
-              <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-            </label>
+            </div>
           </div>
 
           {/* Room Type */}

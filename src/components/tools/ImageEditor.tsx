@@ -79,6 +79,30 @@ export default function ImageEditor({ isAuthenticated, onRequestAuth }: ImageEdi
     setInstructions((prev) => (prev ? `${prev}. ${prompt}` : prompt));
   };
 
+  const downloadEdit = async (url: string, id: number) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = `edited-image-${id}-${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(objectUrl);
+    } catch (error) {
+      console.error('Download failed:', error);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `edited-image-${id}-${Date.now()}.png`;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
   const handleEdit = async () => {
     if (!isAuthenticated) {
       onRequestAuth();
@@ -393,7 +417,10 @@ export default function ImageEditor({ isAuthenticated, onRequestAuth }: ImageEdi
                   <div className="p-3 bg-slate-800/50">
                     <p className="text-xs text-slate-400">{edit.timestamp.toLocaleTimeString()}</p>
                     <p className="text-xs text-slate-300 mt-1 line-clamp-2">{edit.prompt}</p>
-                    <button className="mt-2 text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 text-white rounded flex items-center gap-1">
+                    <button
+                      onClick={() => downloadEdit(edit.imageUrl, edit.id)}
+                      className="mt-2 text-xs px-3 py-1 bg-slate-700 hover:bg-slate-600 text-white rounded flex items-center gap-1"
+                    >
                       <Download className="w-3 h-3" />
                       Download
                     </button>

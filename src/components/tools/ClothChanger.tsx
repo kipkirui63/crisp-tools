@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Upload, Image, Wand2, Loader2, Download, AlertCircle } from 'lucide-react';
+import { Upload, Image, Wand2, Loader2, Download, AlertCircle, X } from 'lucide-react';
 
 interface ClothChangerProps {
   isAuthenticated: boolean;
@@ -64,7 +64,7 @@ export default function ClothChanger({ isAuthenticated, onRequestAuth }: ClothCh
       const results: string[] = [];
 
       for (let i = 0; i < numImages; i++) {
-        const prompt = `Virtual clothing try-on: ${clothDescription}. Professional fashion photography, high quality, realistic clothing simulation.`;
+        const prompt = `Apply virtual clothing transformation to this image: ${clothDescription}. Maintain person's body proportions, skin tone, and facial features. Professional fashion photography, high quality, realistic clothing simulation, photorealistic output.`;
 
         const response = await fetch('/api/generationJobs', {
           method: 'POST',
@@ -104,13 +104,28 @@ export default function ClothChanger({ isAuthenticated, onRequestAuth }: ClothCh
     }
   };
 
-  const downloadImage = (url: string, index: number) => {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `cloth-change-${index + 1}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const downloadImage = async (url: string, index: number) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = `cloth-change-${index + 1}-${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(objectUrl);
+    } catch (error) {
+      console.error('Download failed:', error);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `cloth-change-${index + 1}-${Date.now()}.png`;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   return (
@@ -146,12 +161,23 @@ export default function ClothChanger({ isAuthenticated, onRequestAuth }: ClothCh
             {uploadedPreviews.length > 0 && (
               <div className="mt-4 grid grid-cols-3 gap-2">
                 {uploadedPreviews.map((src, i) => (
-                  <img
-                    key={i}
-                    src={src}
-                    alt={`Upload ${i}`}
-                    className="rounded-lg object-cover w-full h-24 border border-slate-700"
-                  />
+                  <div key={i} className="relative group">
+                    <img
+                      src={src}
+                      alt={`Upload ${i}`}
+                      className="rounded-lg object-cover w-full h-24 border border-slate-700"
+                    />
+                    <button
+                      onClick={() => {
+                        setUploadedImages(uploadedImages.filter((_, idx) => idx !== i));
+                        setUploadedPreviews(uploadedPreviews.filter((_, idx) => idx !== i));
+                      }}
+                      className="absolute top-1 right-1 p-1 bg-red-500/90 hover:bg-red-600 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Remove image"
+                    >
+                      <X className="w-4 h-4 text-white" />
+                    </button>
+                  </div>
                 ))}
               </div>
             )}

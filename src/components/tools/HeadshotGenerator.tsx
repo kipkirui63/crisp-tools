@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Upload, User, Wand2, Loader2, Download } from 'lucide-react';
+import { Upload, User, Wand2, Loader2, Download, X, AlertCircle } from 'lucide-react';
 
 interface HeadshotGeneratorProps {
   isAuthenticated: boolean;
@@ -57,7 +57,7 @@ export default function HeadshotGenerator({ isAuthenticated, onRequestAuth }: He
         linkedin: 'professional LinkedIn profile photo, business casual, clean background, confident'
       };
 
-      const prompt = `High-quality ${styleDescriptions[style as keyof typeof styleDescriptions]}, professional photography, sharp focus, 8k resolution`;
+      const prompt = `Transform this portrait into a high-quality ${styleDescriptions[style as keyof typeof styleDescriptions]}, professional photography, sharp focus, 8k resolution, maintain person's likeness and features`;
 
       // Get first available model
       const modelsResponse = await fetch('/api/models', {
@@ -114,14 +114,29 @@ export default function HeadshotGenerator({ isAuthenticated, onRequestAuth }: He
     }
   };
 
-  const downloadHeadshot = () => {
+  const downloadHeadshot = async () => {
     if (generatedHeadshot) {
-      const link = document.createElement('a');
-      link.href = generatedHeadshot;
-      link.download = 'professional-headshot.png';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      try {
+        const response = await fetch(generatedHeadshot);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `professional-headshot-${Date.now()}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error('Download failed:', error);
+        const link = document.createElement('a');
+        link.href = generatedHeadshot;
+        link.download = `professional-headshot-${Date.now()}.png`;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
     }
   };
 
@@ -133,18 +148,34 @@ export default function HeadshotGenerator({ isAuthenticated, onRequestAuth }: He
             <label className="block text-sm font-medium text-slate-300 mb-2">
               Upload Portrait
             </label>
-            <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer hover:border-cyan-500 transition-all bg-slate-900/50">
-              {uploadedImage ? (
-                <img src={uploadedImage} alt="Portrait" className="max-h-full object-contain" />
-              ) : (
-                <div className="text-center">
-                  <Upload className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-                  <p className="text-slate-400">Upload your photo</p>
-                  <p className="text-slate-500 text-xs mt-1">Best with face-forward photos</p>
-                </div>
+            <div className="relative">
+              <label className="flex flex-col items-center justify-center w-full h-64 border-2 border-dashed border-slate-600 rounded-lg cursor-pointer hover:border-cyan-500 transition-all bg-slate-900/50">
+                {uploadedImage ? (
+                  <img src={uploadedImage} alt="Portrait" className="max-h-full object-contain" />
+                ) : (
+                  <div className="text-center">
+                    <Upload className="w-12 h-12 text-slate-400 mx-auto mb-3" />
+                    <p className="text-slate-400">Upload your photo</p>
+                    <p className="text-slate-500 text-xs mt-1">Best with face-forward photos</p>
+                  </div>
+                )}
+                <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+              </label>
+              {uploadedImage && !isGenerating && (
+                <button
+                  onClick={() => {
+                    setUploadedImage(null);
+                    setUploadedFile(null);
+                    setGeneratedHeadshot(null);
+                    setError(null);
+                  }}
+                  className="absolute top-2 right-2 p-2 bg-red-500/90 hover:bg-red-600 rounded-lg transition-colors"
+                  title="Remove image"
+                >
+                  <X className="w-5 h-5 text-white" />
+                </button>
               )}
-              <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
-            </label>
+            </div>
           </div>
 
           <div>

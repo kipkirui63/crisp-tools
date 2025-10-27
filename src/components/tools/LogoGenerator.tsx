@@ -151,13 +151,28 @@ export default function LogoGenerator({ isAuthenticated, onRequestAuth }: LogoGe
     }
   };
 
-  const downloadImage = (url: string, index: number) => {
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `logo-${index + 1}.png`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  const downloadImage = async (url: string, index: number) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const objectUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = objectUrl;
+      link.download = `logo-${index + 1}-${Date.now()}.png`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(objectUrl);
+    } catch (error) {
+      console.error('Download failed:', error);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `logo-${index + 1}-${Date.now()}.png`;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
   };
 
   const handleModelSelect = (model: ModelOption) => {
