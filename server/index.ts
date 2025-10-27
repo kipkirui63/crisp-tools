@@ -11,6 +11,7 @@ import imageEditorRoutes from './routes/imageeditor';
 import stripeRoutes from './routes/stripe';
 import backgroundRemovalRoutes from './routes/background-removal';
 import ocrRoutes from './routes/ocr';
+import downloadImageRoutes from './routes/download-image';
 import { setupVite } from './vite';
 
 dotenv.config();
@@ -37,6 +38,7 @@ app.use('/api/image-edit', imageEditorRoutes);
 app.use('/api/stripe', stripeRoutes);
 app.use('/api/background-removal', backgroundRemovalRoutes);
 app.use('/api/ocr', ocrRoutes);
+app.use('/api', downloadImageRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' });

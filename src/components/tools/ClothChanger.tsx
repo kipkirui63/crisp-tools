@@ -111,7 +111,30 @@ export default function ClothChanger({ isAuthenticated, onRequestAuth }: ClothCh
 
   const downloadImage = async (url: string, index: number) => {
     try {
-      const response = await fetch(url);
+      if (url.startsWith('data:')) {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `cloth-change-${index + 1}-${Date.now()}.png`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        return;
+      }
+
+      const token = localStorage.getItem('token');
+      const response = await fetch('/api/download-image', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`,
+        },
+        body: JSON.stringify({ imageUrl: url }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Download failed');
+      }
+
       const blob = await response.blob();
       const objectUrl = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
@@ -123,13 +146,7 @@ export default function ClothChanger({ isAuthenticated, onRequestAuth }: ClothCh
       window.URL.revokeObjectURL(objectUrl);
     } catch (error) {
       console.error('Download failed:', error);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `cloth-change-${index + 1}-${Date.now()}.png`;
-      link.target = '_blank';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      window.open(url, '_blank');
     }
   };
 
