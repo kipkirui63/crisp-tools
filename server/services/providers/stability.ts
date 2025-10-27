@@ -2,21 +2,39 @@ import type { ImageGenerationRequest, ImageGenerationResponse, APIProvider } fro
 
 export class StabilityAIProvider implements APIProvider {
   private apiKey: string;
+  public supportsImageToImage = true;
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
   }
 
   async generateImage(request: ImageGenerationRequest): Promise<ImageGenerationResponse> {
-    const endpoint = this.getEndpoint(request.model);
-    
+    const endpoint = request.inputImage
+      ? this.getImageToImageEndpoint(request.model)
+      : this.getEndpoint(request.model);
+
+    console.log(`[Stability] Using ${request.inputImage ? 'img2img' : 'text-to-image'} endpoint: ${endpoint}`);
+
     const formData = new FormData();
     formData.append('prompt', request.prompt);
+
+    if (request.inputImage) {
+      const blob = new Blob([request.inputImage], { type: 'image/png' });
+      formData.append('image', blob, 'input.png');
+
+      if (request.strength !== undefined) {
+        formData.append('strength', request.strength.toString());
+      } else {
+        formData.append('strength', '0.7');
+      }
+      console.log(`[Stability] Using img2img with strength: ${request.strength || 0.7}`);
+    }
+
     if (request.negativePrompt) {
       formData.append('negative_prompt', request.negativePrompt);
     }
     formData.append('output_format', 'png');
-    
+
     const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
@@ -33,7 +51,7 @@ export class StabilityAIProvider implements APIProvider {
 
     const imageBuffer = await response.arrayBuffer();
     const base64 = Buffer.from(imageBuffer).toString('base64');
-    
+
     return {
       imageUrl: `data:image/png;base64,${base64}`,
     };
@@ -45,6 +63,16 @@ export class StabilityAIProvider implements APIProvider {
       'stable-diffusion-3': 'https://api.stability.ai/v2beta/stable-image/generate/sd3',
       'stable-diffusion-3.5-large': 'https://api.stability.ai/v2beta/stable-image/generate/sd3',
       'stable-diffusion-3.5-large-turbo': 'https://api.stability.ai/v2beta/stable-image/generate/sd3-turbo',
+    };
+    return mapping[model] || mapping['stable-diffusion-xl'];
+  }
+
+  private getImageToImageEndpoint(model: string): string {
+    const mapping: Record<string, string> = {
+      'stable-diffusion-xl': 'https://api.stability.ai/v2beta/stable-image/control/sketch',
+      'stable-diffusion-3': 'https://api.stability.ai/v2beta/stable-image/control/sketch',
+      'stable-diffusion-3.5-large': 'https://api.stability.ai/v2beta/stable-image/control/sketch',
+      'stable-diffusion-3.5-large-turbo': 'https://api.stability.ai/v2beta/stable-image/control/sketch',
     };
     return mapping[model] || mapping['stable-diffusion-xl'];
   }

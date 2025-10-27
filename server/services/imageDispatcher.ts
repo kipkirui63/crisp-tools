@@ -120,18 +120,22 @@ export class ImageGenerationDispatcher {
 
   async generateImage(request: ImageGenerationRequest): Promise<ImageGenerationResponse> {
     const providerName = this.modelToProvider.get(request.model);
-    
+
     if (!providerName) {
       throw new Error(`Unknown model: ${request.model}. Model not registered in dispatcher.`);
     }
 
     const provider = this.providers.get(providerName);
-    
+
     if (!provider) {
       throw new Error(
         `Provider not configured: ${providerName}. Please add API key to environment variables.`
       );
     }
+
+    console.log(`[Dispatcher] Using provider: ${providerName} for model: ${request.model}`);
+    console.log(`[Dispatcher] Has input image: ${!!request.inputImage}, Size: ${request.inputImage?.length || 0} bytes`);
+    console.log(`[Dispatcher] Provider supports img2img: ${provider.supportsImageToImage || false}`);
 
     try {
       return await provider.generateImage(request);
