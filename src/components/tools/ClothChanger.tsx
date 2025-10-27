@@ -43,7 +43,7 @@ export default function ClothChanger({ isAuthenticated, onRequestAuth }: ClothCh
     try {
       const token = localStorage.getItem('token');
 
-      // Get first available model
+      // Get models and prefer Stability AI for img2img
       const modelsResponse = await fetch('/api/models', {
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -55,11 +55,17 @@ export default function ClothChanger({ isAuthenticated, onRequestAuth }: ClothCh
       }
 
       const modelsData = await modelsResponse.json();
-      const firstModel = modelsData.models?.[0];
 
-      if (!firstModel) {
+      // Prefer Stability AI models for clothing transformation (better img2img)
+      const preferredModel = modelsData.models?.find((m: any) =>
+        m.provider === 'Stability AI' && m.apiModel.includes('stable-diffusion-3')
+      ) || modelsData.models?.[0];
+
+      if (!preferredModel) {
         throw new Error('No models available');
       }
+
+      console.log('[ClothChanger] Using model:', preferredModel.name, preferredModel.apiModel);
 
       const results: string[] = [];
 
@@ -67,7 +73,7 @@ export default function ClothChanger({ isAuthenticated, onRequestAuth }: ClothCh
         const prompt = `Apply virtual clothing transformation to this image: ${clothDescription}. Maintain person's body proportions, skin tone, and facial features. Professional fashion photography, high quality, realistic clothing simulation, photorealistic output.`;
 
         const formData = new FormData();
-        formData.append('modelId', firstModel.id);
+        formData.append('modelId', preferredModel.id);
         formData.append('toolType', 'cloth-changer');
         formData.append('prompt', prompt);
         formData.append('options', JSON.stringify({
@@ -75,7 +81,7 @@ export default function ClothChanger({ isAuthenticated, onRequestAuth }: ClothCh
           width: 1024,
           height: 1024,
         }));
-        formData.append('strength', '0.7');
+        formData.append('strength', '0.65');
 
         if (uploadedImages.length > 0) {
           formData.append('inputImage', uploadedImages[0]);

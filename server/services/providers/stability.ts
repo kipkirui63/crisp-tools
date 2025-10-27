@@ -69,11 +69,11 @@ export class StabilityAIProvider implements APIProvider {
 
   private getImageToImageEndpoint(model: string): string {
     const mapping: Record<string, string> = {
-      'stable-diffusion-xl': 'https://api.stability.ai/v2beta/stable-image/control/sketch',
-      'stable-diffusion-3': 'https://api.stability.ai/v2beta/stable-image/control/sketch',
-      'stable-diffusion-3.5-large': 'https://api.stability.ai/v2beta/stable-image/control/sketch',
-      'stable-diffusion-3.5-large-turbo': 'https://api.stability.ai/v2beta/stable-image/control/sketch',
+      'stable-diffusion-xl': 'https://api.stability.ai/v2beta/stable-image/generate/sd3',
+      'stable-diffusion-3': 'https://api.stability.ai/v2beta/stable-image/generate/sd3',
+      'stable-diffusion-3.5-large': 'https://api.stability.ai/v2beta/stable-image/generate/sd3',
+      'stable-diffusion-3.5-large-turbo': 'https://api.stability.ai/v2beta/stable-image/generate/sd3-turbo',
     };
-    return mapping[model] || mapping['stable-diffusion-xl'];
+    return mapping[model] || mapping['stable-diffusion-3'];
   }
 }
