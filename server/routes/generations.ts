@@ -1,5 +1,6 @@
 // ===== server/routes/generationJobs.ts - FOR IMAGEGENERATOR ONLY =====
 import { Router, Response } from 'express';
+import multer from 'multer';
 import { getDispatcher } from '../services/imageDispatcher';
 import { db } from '../db';
 import { aiModels, generationJobs, users } from '../db/schema';
@@ -7,21 +8,40 @@ import { eq } from 'drizzle-orm';
 import { requireAuth, AuthRequest } from '../middleware/auth';
 
 const router = Router();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 50 * 1024 * 1024,
+  }
+});
 
 /**
  * POST /api/generationJobs
  * Generate images using the selected AI model
  */
-router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
+router.post('/', requireAuth, upload.single('inputImage'), async (req: AuthRequest, res: Response) => {
   try {
-    const { modelId, toolType, prompt, options } = req.body;
+    const { modelId, toolType, prompt, options: optionsRaw, strength } = req.body;
     const userId = req.user!.id;
+    const inputImageFile = (req as any).file;
+
+    // Parse options if it's a JSON string (from FormData)
+    let options: any = optionsRaw;
+    if (typeof optionsRaw === 'string') {
+      try {
+        options = JSON.parse(optionsRaw);
+      } catch (e) {
+        options = {};
+      }
+    }
+
     const numberOfImages = options?.numberOfImages || 1;
 
     // Validate inputs
     if (!modelId || !prompt || !toolType) {
-      return res.status(400).json({ 
-        error: 'Missing required fields: modelId, prompt, toolType' 
+      console.error('[Generation] Missing fields:', { modelId, prompt, toolType, body: req.body });
+      return res.status(400).json({
+        error: 'Missing required fields: modelId, prompt, toolType'
       });
     }
 
@@ -71,12 +91,17 @@ router.post('/', requireAuth, async (req: AuthRequest, res: Response) => {
     for (let i = 0; i < numberOfImages; i++) {
       try {
         console.log(`[Generation] Generating image ${i + 1}/${numberOfImages}...`);
-        
+        if (inputImageFile) {
+          console.log(`[Generation] Using input image: ${inputImageFile.originalname}, size: ${inputImageFile.size} bytes`);
+        }
+
         const result = await dispatcher.generateImage({
           prompt,
           model: model.apiModel,
           width: options?.width || 1024,
           height: options?.height || 1024,
+          inputImage: inputImageFile?.buffer,
+          strength: strength ? parseFloat(strength) : 0.7,
         });
 
         generatedImages.push(result.imageUrl);
