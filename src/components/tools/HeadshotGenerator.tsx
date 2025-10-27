@@ -48,7 +48,6 @@ export default function HeadshotGenerator({ isAuthenticated, onRequestAuth }: He
 
     try {
       const token = localStorage.getItem('token');
-      const formData = new FormData();
 
       const styleDescriptions = {
         professional: 'professional corporate headshot, business attire, studio lighting, neutral background',
@@ -77,22 +76,27 @@ export default function HeadshotGenerator({ isAuthenticated, onRequestAuth }: He
         throw new Error('No models available');
       }
 
+      const formData = new FormData();
+      formData.append('modelId', firstModel.id);
+      formData.append('toolType', 'headshot-generator');
+      formData.append('prompt', prompt);
+      formData.append('options', JSON.stringify({
+        numberOfImages: 1,
+        width: 1024,
+        height: 1024,
+      }));
+      formData.append('strength', '0.7');
+
+      if (uploadedFile) {
+        formData.append('inputImage', uploadedFile);
+      }
+
       const response = await fetch('/api/generationJobs', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          modelId: firstModel.id, // UUID string
-          toolType: 'headshot-generator',
-          prompt,
-          options: {
-            numberOfImages: 1,
-            width: 1024,
-            height: 1024,
-          },
-        }),
+        body: formData,
       });
 
       if (!response.ok) {

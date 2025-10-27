@@ -66,22 +66,27 @@ export default function ClothChanger({ isAuthenticated, onRequestAuth }: ClothCh
       for (let i = 0; i < numImages; i++) {
         const prompt = `Apply virtual clothing transformation to this image: ${clothDescription}. Maintain person's body proportions, skin tone, and facial features. Professional fashion photography, high quality, realistic clothing simulation, photorealistic output.`;
 
+        const formData = new FormData();
+        formData.append('modelId', firstModel.id);
+        formData.append('toolType', 'cloth-changer');
+        formData.append('prompt', prompt);
+        formData.append('options', JSON.stringify({
+          numberOfImages: 1,
+          width: 1024,
+          height: 1024,
+        }));
+        formData.append('strength', '0.7');
+
+        if (uploadedImages.length > 0) {
+          formData.append('inputImage', uploadedImages[0]);
+        }
+
         const response = await fetch('/api/generationJobs', {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            modelId: firstModel.id,
-            toolType: 'cloth-changer',
-            prompt,
-            options: {
-              numberOfImages: 1,
-              width: 1024,
-              height: 1024,
-            },
-          }),
+          body: formData,
         });
 
         if (!response.ok) {
