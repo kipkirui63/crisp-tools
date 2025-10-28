@@ -310,6 +310,32 @@ const seedModels = [
     capabilities: { styles: ['artistic-illustrations'], maxResolution: '2048x2048' },
     costPerUse: 2,
   },
+
+  // ===== Replicate (Virtual Try-On) =====
+  {
+    name: 'IDM-VTON (Virtual Try-On)',
+    provider: 'Replicate',
+    modelType: 'image_generation',
+    apiModel: 'idm-vton',
+    capabilities: { styles: ['virtual-tryon', 'fashion'], maxResolution: '1024x1024' },
+    costPerUse: 3,
+  },
+  {
+    name: 'VITON-HD (Virtual Try-On)',
+    provider: 'Replicate',
+    modelType: 'image_generation',
+    apiModel: 'viton-hd',
+    capabilities: { styles: ['virtual-tryon', 'high-resolution'], maxResolution: '1024x1024' },
+    costPerUse: 3,
+  },
+  {
+    name: 'OOT-Diffusion (Virtual Try-On)',
+    provider: 'Replicate',
+    modelType: 'image_generation',
+    apiModel: 'oot-diffusion',
+    capabilities: { styles: ['virtual-tryon', 'advanced'], maxResolution: '1024x1024' },
+    costPerUse: 3,
+  },
 ];
 
 async function seed() {

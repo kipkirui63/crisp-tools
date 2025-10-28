@@ -11,6 +11,7 @@ import { TencentProvider } from './providers/tencent';
 import { XAIProvider } from './providers/xai';
 import { LumaProvider } from './providers/luma';
 import { RecraftProvider } from './providers/recraft';
+import { ReplicateProvider } from './providers/replicate';
 import type { ImageGenerationRequest, ImageGenerationResponse, APIProvider } from './types';
 
 export class ImageGenerationDispatcher {
@@ -60,6 +61,9 @@ export class ImageGenerationDispatcher {
     }
     if (apiKeys.recraft) {
       this.providers.set('Recraft', new RecraftProvider(apiKeys.recraft));
+    }
+    if (apiKeys.replicate) {
+      this.providers.set('Replicate', new ReplicateProvider(apiKeys.replicate));
     }
 
     this.initializeModelMapping();
@@ -116,6 +120,11 @@ export class ImageGenerationDispatcher {
     this.modelToProvider.set('luma-photon', 'Luma');
     this.modelToProvider.set('luma-photon-flash', 'Luma');
     this.modelToProvider.set('recraft-v3', 'Recraft');
+
+    // ===== Replicate (Virtual Try-On models) =====
+    this.modelToProvider.set('viton-hd', 'Replicate');
+    this.modelToProvider.set('idm-vton', 'Replicate');
+    this.modelToProvider.set('oot-diffusion', 'Replicate');
   }
 
   async generateImage(request: ImageGenerationRequest): Promise<ImageGenerationResponse> {
@@ -189,6 +198,7 @@ export function getDispatcher(): ImageGenerationDispatcher {
       xai: process.env.XAI_API_KEY || '',
       luma: process.env.LUMA_API_KEY || '',
       recraft: process.env.RECRAFT_API_KEY || '',
+      replicate: process.env.REPLICATE_API_TOKEN || '',
     });
   }
   return dispatcher;
